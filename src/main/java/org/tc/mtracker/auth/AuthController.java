@@ -15,7 +15,7 @@ import java.net.URI;
 @RequestMapping(value = "/api/v1/auth")
 @RequiredArgsConstructor
 @Validated
-public class AuthController implements AuthOperations {
+public class AuthController implements UserAuthAPI {
 
     private final AuthService authService;
 

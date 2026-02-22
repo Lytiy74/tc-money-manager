@@ -21,7 +21,7 @@ import org.tc.mtracker.security.JwtResponseDTO;
 import org.tc.mtracker.utils.image.ValidImage;
 
 @Tag(name = "Authentication", description = "Authentication and email verification endpoints")
-public interface AuthOperations {
+public interface UserAuthAPI {
 
     @Operation(summary = "Sign up a new user",
             description = "Creates a new user and sends email verification link. Account not activated until verified")

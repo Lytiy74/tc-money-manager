@@ -22,7 +22,7 @@ import org.tc.mtracker.user.dto.UserResponseDTO;
 import org.tc.mtracker.utils.image.ValidImage;
 
 @Tag(name = "User Management", description = "User management endpoints")
-public interface UserOperations {
+public interface UserProfileAPI {
 
     @Operation(summary = "Update user's profile",
             description = "Updates the user's data by new one.")

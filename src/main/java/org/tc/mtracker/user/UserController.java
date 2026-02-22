@@ -16,7 +16,7 @@ import org.tc.mtracker.user.dto.UserResponseDTO;
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
 @Validated
-public class UserController implements UserOperations {
+public class UserController implements UserProfileAPI {
 
     private final UserService userService;
 
