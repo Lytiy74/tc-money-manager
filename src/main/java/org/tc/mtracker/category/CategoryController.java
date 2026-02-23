@@ -2,6 +2,11 @@ package org.tc.mtracker.category;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -24,12 +29,31 @@ import java.util.List;
 public class CategoryController  {
 
     private final CategoryService categoryService;
-    private final CategoryMapper categoryMapper;
 
     @Operation(
             summary = "Get a list of available categories",
             description = "Returns the whole list of user's categories"
     )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Successfully retrieved categories",
+                    content = @Content(
+                            mediaType = "application/json",
+                            array = @ArraySchema(schema = @Schema(implementation = CategoryResponseDTO.class))
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid request parameters (e.g., invalid CategoryType)",
+                    content = @Content
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized - User is not authenticated",
+                    content = @Content
+            )
+    })
     @GetMapping
     public ResponseEntity<List<CategoryResponseDTO>> getCategories(
             @RequestParam("name") String name,
