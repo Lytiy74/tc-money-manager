@@ -49,6 +49,12 @@ public class UserService {
         return userMapper.toDto(user);
     }
 
+    public User getCurrentAuthenticatedUser(Authentication auth) {
+        return userRepository.findByEmail(auth.getName()).orElseThrow(
+                () -> new UserNotFoundException("User with username '" + auth.getName() + "' not found")
+        );
+    }
+
     @Transactional
     public ResponseUserProfileDTO updateProfile(UpdateUserProfileDTO dto, MultipartFile avatar, Authentication auth) {
         User user = userRepository.findByEmail(auth.getName()).orElseThrow(
