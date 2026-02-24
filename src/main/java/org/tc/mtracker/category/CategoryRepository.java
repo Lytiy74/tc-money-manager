@@ -8,6 +8,7 @@ import org.tc.mtracker.category.enums.CategoryType;
 import org.tc.mtracker.user.User;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Long> {
@@ -22,4 +23,11 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
             @Param("name") String name,
             @Param("types") List<CategoryType> types
     );
+
+    @Query("""
+        SELECT c from Category c
+        WHERE (c.user = :user OR c.user IS NULL)
+        AND LOWER(c.name) = LOWER(:name)
+    """)
+    Optional<Category> findByNameAndUser(String name, User user);
 }

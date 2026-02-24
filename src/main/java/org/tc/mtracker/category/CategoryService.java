@@ -4,11 +4,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.tc.mtracker.category.dto.CategoryResponseDTO;
+import org.tc.mtracker.category.dto.CreateCategoryDTO;
+import org.tc.mtracker.category.enums.CategoryStatus;
 import org.tc.mtracker.category.enums.CategoryType;
 import org.tc.mtracker.user.User;
 import org.tc.mtracker.user.UserService;
+import org.tc.mtracker.utils.exceptions.CategoryAlreadyExistsException;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -28,5 +34,26 @@ public class CategoryService {
         );
 
         return categoryMapper.toListDto(categories);
+    }
+
+    public CategoryResponseDTO createCategory(CreateCategoryDTO dto, Authentication auth) {
+        User currentUser = userService.getCurrentAuthenticatedUser(auth);
+
+        Optional<Category> category = categoryRepository.findByNameAndUser(dto.name(), currentUser);
+
+        if (category.isPresent() && dto.type().equals(category.get().getType())) {
+            throw new CategoryAlreadyExistsException("This category is already exists. Please enter another name or select another type");
+        }
+
+        Category newCategory = Category.builder()
+                .name(dto.name())
+                .type(dto.type())
+                .icon(dto.icon())
+                .status(CategoryStatus.ACTIVE)
+                .build();
+
+        Category saved = categoryRepository.save(newCategory);
+
+        return categoryMapper.toDto(saved);
     }
 }

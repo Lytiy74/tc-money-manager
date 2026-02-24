@@ -8,15 +8,15 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.tc.mtracker.category.dto.CategoryResponseDTO;
+import org.tc.mtracker.category.dto.CreateCategoryDTO;
 import org.tc.mtracker.category.enums.CategoryType;
 
 import java.util.List;
@@ -62,5 +62,42 @@ public class CategoryController  {
     ) {
 
         return ResponseEntity.ok((categoryService.getCategories(name, type, auth)));
+    }
+
+    @Operation(
+            summary = "Create a new category",
+            description = "Creates a custom category for the authenticated user. " +
+                    "Returns 409 if a category with the same name and type already exists for this user."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "Category created successfully",
+                    content = @Content(schema = @Schema(implementation = CategoryResponseDTO.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid input data or validation failed",
+                    content = @Content
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized - Valid JWT token required",
+                    content = @Content
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Conflict - Category with this name and type already exists",
+                    content = @Content
+            )
+    })
+    @PostMapping
+    public ResponseEntity<CategoryResponseDTO> createCategory(
+            @Valid @RequestBody CreateCategoryDTO dto,
+            @Parameter(hidden = true) Authentication auth
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(categoryService.createCategory(dto, auth));
     }
 }

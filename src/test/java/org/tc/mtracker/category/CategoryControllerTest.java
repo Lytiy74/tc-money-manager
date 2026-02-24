@@ -8,10 +8,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import org.tc.mtracker.category.dto.CategoryResponseDTO;
+import org.tc.mtracker.category.dto.CreateCategoryDTO;
 import org.tc.mtracker.category.enums.CategoryType;
 import org.tc.mtracker.utils.S3Service;
 import org.tc.mtracker.utils.TestHelpers;
@@ -114,5 +116,52 @@ class CategoryControllerTest {
                 .expectBody()
                 .jsonPath("$.length()").isEqualTo(1)
                 .jsonPath("$[0].name").isEqualTo("Rent");
+    }
+
+    @Test
+    void shouldCreateCategorySuccessfully() {
+        CreateCategoryDTO newCategory = new CreateCategoryDTO("Health", CategoryType.EXPENSE, "heart-pulse");
+
+        restTestClient
+                .post()
+                .uri("/api/v1/categories")
+                .header(HttpHeaders.AUTHORIZATION, authToken)
+                .body(newCategory)
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(CategoryResponseDTO.class)
+                .value(response -> {
+                    assertThat(response.name()).isEqualTo("Health");
+                    assertThat(response.type()).isEqualTo(CategoryType.EXPENSE);
+                    assertThat(response.icon()).isEqualTo("heart-pulse");
+                });
+    }
+
+    @Test
+    void shouldReturnConflictWhenCategoryAlreadyExists() {
+        // Assuming "Salary" / INCOME exists in your test_categories.sql
+        CreateCategoryDTO duplicate = new CreateCategoryDTO("Salary", CategoryType.INCOME, "money");
+
+        restTestClient
+                .post()
+                .uri("/api/v1/categories")
+                .header(HttpHeaders.AUTHORIZATION, authToken)
+                .body(duplicate)
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenNameIsMissing() {
+        // Create a DTO that violates validation (if you have @NotBlank on name)
+        CreateCategoryDTO invalid = new CreateCategoryDTO("", CategoryType.EXPENSE, "icon");
+
+        restTestClient
+                .post()
+                .uri("/api/v1/categories")
+                .header(HttpHeaders.AUTHORIZATION, authToken)
+                .body(invalid)
+                .exchange()
+                .expectStatus().isBadRequest();
     }
 }

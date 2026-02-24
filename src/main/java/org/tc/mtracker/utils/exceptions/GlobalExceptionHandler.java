@@ -78,4 +78,10 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleException(Exception ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
+
+    @ExceptionHandler(CategoryAlreadyExistsException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ProblemDetail handleUsersCategoryNameAlreadyExistsException(CategoryAlreadyExistsException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+    }
 }
