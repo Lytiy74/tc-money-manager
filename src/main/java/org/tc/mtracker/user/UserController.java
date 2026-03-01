@@ -17,10 +17,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.tc.mtracker.user.dto.RequestUpdateUserEmailDTO;
-import org.tc.mtracker.user.dto.ResponseUserProfileDTO;
-import org.tc.mtracker.user.dto.UpdateUserProfileDTO;
-import org.tc.mtracker.user.dto.UserResponseDTO;
+import org.tc.mtracker.user.dto.*;
 import org.tc.mtracker.user.image.ValidImage;
 
 @RestController
@@ -93,13 +90,45 @@ public class UserController {
         return ResponseEntity.ok().build();
     }
 
+    @Operation(summary = "Update user's password",
+            description = "Updates the user's password by new one.")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Password updated successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid password format",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ProblemDetail.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "User not found",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ProblemDetail.class)
+                    )
+            )
+    })
+    @PutMapping(value = "/me/update-password")
+    public ResponseEntity<Void> updatePassword(
+            @RequestBody @Valid UpdateUserPasswordRequestDTO dto,
+            @Parameter(hidden = true) Authentication auth) {
+        userService.updatePassword(dto, auth);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping(value = "/verify-email")
     public ResponseEntity<Void> verifyEmail(@RequestParam String token) {
         userService.verifyEmailUpdate(token);
         return ResponseEntity.ok().build();
     }
 
-    @ApiResponses({
+    @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User profile returned",
                     content = @Content(mediaType = "application/json",
                             schema = @Schema(implementation = UserResponseDTO.class))),

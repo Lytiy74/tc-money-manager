@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.tc.mtracker.auth.EmailService;
 import org.tc.mtracker.user.dto.RequestUpdateUserEmailDTO;
 import org.tc.mtracker.currency.CurrencyCode;
+import org.tc.mtracker.user.dto.UpdateUserPasswordRequestDTO;
 import org.tc.mtracker.user.dto.UpdateUserProfileDTO;
 import org.tc.mtracker.utils.S3Service;
 import org.tc.mtracker.utils.TestHelpers;
@@ -368,5 +369,50 @@ class UserControllerTest {
                 .uri("/api/v1/users/me")
                 .exchange()
                 .expectStatus().isForbidden();
+    }
+
+    @Test
+    @Sql("/datasets/test_users.sql")
+    void shouldReturn200WhenPasswordUpdated() {
+        String accessToken = testHelpers.generateTestToken("test@gmail.com", "access_token", 3600000);
+        UpdateUserPasswordRequestDTO dto = new UpdateUserPasswordRequestDTO("12345678", "newPassword", "newPassword");
+
+        restTestClient
+                .put()
+                .uri("/api/v1/users/me/update-password")
+                .header("Authorization", "Bearer " + accessToken)
+                .body(dto)
+                .exchange()
+                .expectStatus().isOk();
+    }
+
+    @Test
+    @Sql("/datasets/test_users.sql")
+    void shouldReturn400WhenCurrentPasswordIsInvalid() {
+        String accessToken = testHelpers.generateTestToken("test@gmail.com", "access_token", 3600000);
+        UpdateUserPasswordRequestDTO dto = new UpdateUserPasswordRequestDTO("87654321", "newPassword", "newPassword");
+
+        restTestClient
+                .put()
+                .uri("/api/v1/users/me/update-password")
+                .header("Authorization", "Bearer " + accessToken)
+                .body(dto)
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    @Sql("/datasets/test_users.sql")
+    void shouldReturn400WhenPasswordIsShort() {
+        String accessToken = testHelpers.generateTestToken("test@gmail.com", "access_token", 3600000);
+        UpdateUserPasswordRequestDTO dto = new UpdateUserPasswordRequestDTO("87654321", "new", "new");
+
+        restTestClient
+                .put()
+                .uri("/api/v1/users/me/update-password")
+                .header("Authorization", "Bearer " + accessToken)
+                .body(dto)
+                .exchange()
+                .expectStatus().isBadRequest();
     }
 }

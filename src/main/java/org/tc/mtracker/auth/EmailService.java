@@ -49,7 +49,7 @@ public class EmailService {
         log.info("Verification email sent to user with email {}", email);
     }
 
-    private void sendPlainTextEmail(String to, String subject, String content) {
+    public void sendPlainTextEmail(String to, String subject, String content) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(to);
         message.setSubject(subject);
