@@ -4,6 +4,7 @@ import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,6 +14,7 @@ import org.tc.mtracker.security.JwtService;
 import org.tc.mtracker.user.dto.*;
 import org.tc.mtracker.utils.S3Service;
 import org.tc.mtracker.utils.exceptions.EmailVerificationException;
+import org.tc.mtracker.utils.exceptions.InvalidPasswordException;
 import org.tc.mtracker.utils.exceptions.UserAlreadyExistsException;
 import org.tc.mtracker.utils.exceptions.UserNotFoundException;
 
@@ -28,6 +30,7 @@ public class UserService {
     private final S3Service s3Service;
     private final JwtService jwtService;
     private final EmailService emailService;
+    private final PasswordEncoder passwordEncoder;
 
     public User save(User user) {
         return userRepository.save(user);
@@ -118,6 +121,17 @@ public class UserService {
         userRepository.save(user);
     }
 
+    public void updatePassword(UpdateUserPasswordRequestDTO dto, Authentication auth) {
+        User user = findByEmail(auth.getName());
+
+        verifyCurrentPasswordWithUserInput(dto.currentPassword(), user.getPassword());
+        verifyPasswordConfirmation(dto.newPassword(), dto.confirmNewPassword());
+        user.setPassword(passwordEncoder.encode(dto.newPassword()));
+        userRepository.save(user);
+        sendPasswordChangeNotification(user.getEmail());
+        log.info("Password for user with id {} is updated successfully!", user.getId());
+    }
+
     private String generateAvatarUrl(User user) {
         return user.getAvatarId() != null ? s3Service.generatePresignedUrl(user.getAvatarId()) : null;
     }
@@ -130,6 +144,22 @@ public class UserService {
         }
         s3Service.saveFile(avatarId, avatar);
         log.info("Avatar with id {} is uploaded successfully!", avatarId);
+    }
+
+    private void sendPasswordChangeNotification(String email) {
+        emailService.sendPlainTextEmail(email, "Password changed", "Your password has been changed successfully.");
+    }
+
+    private void verifyPasswordConfirmation(String firstPassword, String secondPassword) {
+        if (!firstPassword.equals(secondPassword)) {
+            throw new InvalidPasswordException("Password mismatch");
+        }
+    }
+
+    private void verifyCurrentPasswordWithUserInput(String passwordToCheck, String currentUserPassword) {
+        if (!passwordEncoder.matches(passwordToCheck, currentUserPassword)) {
+            throw new InvalidPasswordException("Password mismatch");
+        }
     }
 
 }
