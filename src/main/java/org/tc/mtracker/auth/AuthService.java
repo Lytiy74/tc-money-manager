@@ -56,7 +56,7 @@ public class AuthService {
                 .password(passwordEncoder.encode(dto.password()))
                 .currencyCode(dto.currencyCode())
                 .avatarId(imageKey)
-                .isActivated(false)
+                .activated(false)
                 .build();
         User savedUser = userService.save(user);
 

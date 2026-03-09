@@ -1,12 +1,10 @@
 package org.tc.mtracker.user.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import org.hibernate.validator.constraints.Length;
 import org.tc.mtracker.currency.CurrencyCode;
 
-public record UpdateUserProfileDTO(
+public record RequestUpdateUserProfileDTO(
         @Schema(description = "User's full name", example = "Abraham Lincoln")
         @Length(min = 1, max = 128)
         String fullName,

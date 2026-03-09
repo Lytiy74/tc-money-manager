@@ -3,6 +3,8 @@ package org.tc.mtracker.auth.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.tc.mtracker.currency.CurrencyCode;
 
+import java.time.LocalDateTime;
+
 @Schema(description = "User sign up response")
 public record AuthResponseDTO(
         @Schema(description = "User's id", example = "123123")
@@ -21,6 +23,9 @@ public record AuthResponseDTO(
         String avatarUrl,
 
         @Schema(description = "User's activation status", example = "false")
-        boolean isActivated
+        boolean isActivated,
+
+        @Schema(description = "User's creation date, time", example = "2026-03-09T21:15:54.445851")
+        LocalDateTime createdAt
 ) {
 }

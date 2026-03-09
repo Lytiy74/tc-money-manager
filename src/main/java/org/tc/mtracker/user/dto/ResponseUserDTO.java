@@ -1,10 +1,14 @@
 package org.tc.mtracker.user.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Builder;
 import org.tc.mtracker.currency.CurrencyCode;
 
+import java.time.LocalDateTime;
+
 @Schema(description = "Get user info")
-public record UserResponseDTO(
+@Builder
+public record ResponseUserDTO(
         @Schema(description = "User's id", example = "123")
         Long id,
 
@@ -21,6 +25,9 @@ public record UserResponseDTO(
         String avatarUrl,
 
         @Schema(description = "User's activation status", example = "false")
-        boolean isActivated
+        boolean isActivated,
+
+        @Schema(description = "User's creation date, time", example = "2026-03-09T21:15:54.445851")
+        LocalDateTime createdAt
 ) {
 }
