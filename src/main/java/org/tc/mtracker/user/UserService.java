@@ -44,12 +44,13 @@ public class UserService {
         return userRepository.findByEmail(email).isPresent();
     }
 
-    public UserResponseDTO getUser(Authentication auth) {
+    public ResponseUserDTO getUser(Authentication auth) {
         User user = userRepository.findByEmail(auth.getName()).orElseThrow(
                 () -> new UserNotFoundException("User with username '" + auth.getName() + "' not found")
         );
 
-        return userMapper.toDto(user);
+        String avatarUrl = generateAvatarUrl(user);
+        return userMapper.toDto(user, avatarUrl);
     }
 
     public User getCurrentAuthenticatedUser(Authentication auth) {
@@ -59,7 +60,7 @@ public class UserService {
     }
 
     @Transactional
-    public ResponseUserProfileDTO updateProfile(UpdateUserProfileDTO dto, MultipartFile avatar, Authentication auth) {
+    public ResponseUserDTO updateProfile(RequestUpdateUserProfileDTO dto, MultipartFile avatar, Authentication auth) {
         User user = userRepository.findByEmail(auth.getName()).orElseThrow(
                 () -> new UserNotFoundException("User was not found!")
         );
@@ -72,10 +73,10 @@ public class UserService {
 
         userRepository.save(user);
 
-        String presignedAvatarUrl = generateAvatarUrl(user);
+        String avatarUrl = generateAvatarUrl(user);
         log.info("User with id {} is updated successfully!", user.getId());
 
-        return new ResponseUserProfileDTO(user.getFullName(), presignedAvatarUrl);
+        return userMapper.toDto(user, avatarUrl);
     }
 
     @Transactional
@@ -121,7 +122,7 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public void updatePassword(UpdateUserPasswordRequestDTO dto, Authentication auth) {
+    public void updatePassword(RequestUpdateUserPasswordDTO dto, Authentication auth) {
         User user = findByEmail(auth.getName());
 
         verifyCurrentPasswordWithUserInput(dto.currentPassword(), user.getPassword());

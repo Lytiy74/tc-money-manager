@@ -68,176 +68,178 @@ class AuthControllerTest {
     @Autowired
     private Environment env;
 
-        @Test
-        void shouldReturn201AndAuthResponseDtoIfUserIsSignedUpSuccessfullyWithoutAvatar() {
-            MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-            multipartBodyBuilder.part("dto", new AuthRequestDTO(
-                    "new1-user@gmail.com",
-                    "12345678",
-                    "New1 User",
-                    CurrencyCode.USD
-            ), MediaType.APPLICATION_JSON);
+    @Test
+    void shouldReturn201AndAuthResponseDtoIfUserIsSignedUpSuccessfullyWithoutAvatar() {
+        MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+                "new1-user@gmail.com",
+                "12345678",
+                "New1 User",
+                CurrencyCode.USD
+        ), MediaType.APPLICATION_JSON);
 
-            restTestClient
-                    .post()
-                    .uri("/api/v1/auth/sign-up")
-                    .body(multipartBodyBuilder.build())
-                    .exchange()
-                    .expectStatus().isCreated()
-                    .expectBody()
-                    .jsonPath("$.id").isNotEmpty()
-                    .jsonPath("$.fullName").isEqualTo("New1 User")
-                    .jsonPath("$.email").isEqualTo("new1-user@gmail.com")
-                    .jsonPath("$.currencyCode").isEqualTo("USD")
-                    .jsonPath("$.avatarUrl").isEmpty()
-                    .jsonPath("$.isActivated").isEqualTo(false);
+        restTestClient
+                .post()
+                .uri("/api/v1/auth/sign-up")
+                .body(multipartBodyBuilder.build())
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody()
+                .jsonPath("$.id").isNotEmpty()
+                .jsonPath("$.fullName").isEqualTo("New1 User")
+                .jsonPath("$.email").isEqualTo("new1-user@gmail.com")
+                .jsonPath("$.currencyCode").isEqualTo("USD")
+                .jsonPath("$.avatarUrl").isEmpty()
+                .jsonPath("$.isActivated").isEqualTo(false)
+                .jsonPath("$.createdAt").isNotEmpty();
 
-            verifyNoInteractions(s3Service);
-            verify(emailService, times(1)).sendVerificationEmail(any());
-            verifyNoMoreInteractions(emailService);
-        }
+        verifyNoInteractions(s3Service);
+        verify(emailService, times(1)).sendVerificationEmail(any());
+        verifyNoMoreInteractions(emailService);
+    }
 
-        @Test
-        void shouldReturn201AndAuthResponseDtoIfUserIsSignedUpSuccessfullyWithAvatar() {
-            when(s3Service.generatePresignedUrl(any(String.class))).thenReturn("test-avatar-url");
+    @Test
+    void shouldReturn201AndAuthResponseDtoIfUserIsSignedUpSuccessfullyWithAvatar() {
+        when(s3Service.generatePresignedUrl(any(String.class))).thenReturn("test-avatar-url");
 
-            MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-            multipartBodyBuilder.part("dto", new AuthRequestDTO(
-                    "new-user@gmail.com",
-                    "12345678",
-                    "New User",
-                    CurrencyCode.USD
-            ), MediaType.APPLICATION_JSON);
+        MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+                "new-user@gmail.com",
+                "12345678",
+                "New User",
+                CurrencyCode.USD
+        ), MediaType.APPLICATION_JSON);
 
-            byte[] avatarBytes = "test-avatar.jpg".getBytes();
-            ByteArrayResource avatarResource = new ByteArrayResource(avatarBytes) {
-                @Override
-                public String getFilename() {
-                    return "test-avatar.jpg";
-                }
-            };
-            multipartBodyBuilder.part("avatar", avatarResource, MediaType.IMAGE_JPEG);
+        byte[] avatarBytes = "test-avatar.jpg".getBytes();
+        ByteArrayResource avatarResource = new ByteArrayResource(avatarBytes) {
+            @Override
+            public String getFilename() {
+                return "test-avatar.jpg";
+            }
+        };
+        multipartBodyBuilder.part("avatar", avatarResource, MediaType.IMAGE_JPEG);
 
-            restTestClient
-                    .post()
-                    .uri("/api/v1/auth/sign-up")
-                    .body(multipartBodyBuilder.build())
-                    .exchange()
-                    .expectStatus().isCreated()
-                    .expectBody()
-                    .jsonPath("$.id").isNotEmpty()
-                    .jsonPath("$.fullName").isEqualTo("New User")
-                    .jsonPath("$.email").isEqualTo("new-user@gmail.com")
-                    .jsonPath("$.currencyCode").isEqualTo("USD")
-                    .jsonPath("$.avatarUrl").isEqualTo("test-avatar-url")
-                    .jsonPath("$.isActivated").isEqualTo(false);
+        restTestClient
+                .post()
+                .uri("/api/v1/auth/sign-up")
+                .body(multipartBodyBuilder.build())
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody()
+                .jsonPath("$.id").isNotEmpty()
+                .jsonPath("$.fullName").isEqualTo("New User")
+                .jsonPath("$.email").isEqualTo("new-user@gmail.com")
+                .jsonPath("$.currencyCode").isEqualTo("USD")
+                .jsonPath("$.avatarUrl").isEqualTo("test-avatar-url")
+                .jsonPath("$.isActivated").isEqualTo(false)
+                .jsonPath("$.createdAt").isNotEmpty();
 
-            ArgumentCaptor<String> keyCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> keyCaptor = ArgumentCaptor.forClass(String.class);
 
-            verify(s3Service, times(1)).saveFile(keyCaptor.capture(), any(MultipartFile.class));
-            verify(s3Service, times(1)).generatePresignedUrl(keyCaptor.getValue());
-            verify(emailService, times(1)).sendVerificationEmail(any());
-            verifyNoMoreInteractions(s3Service, emailService);
-        }
+        verify(s3Service, times(1)).saveFile(keyCaptor.capture(), any(MultipartFile.class));
+        verify(s3Service, times(1)).generatePresignedUrl(keyCaptor.getValue());
+        verify(emailService, times(1)).sendVerificationEmail(any());
+        verifyNoMoreInteractions(s3Service, emailService);
+    }
 
-        @Test
-        void shouldReturn400IfDtoPartIsMissingOnSignUp() {
-            MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+    @Test
+    void shouldReturn400IfDtoPartIsMissingOnSignUp() {
+        MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
 
-            byte[] avatarBytes = "avatar".getBytes();
-            ByteArrayResource avatarResource = new ByteArrayResource(avatarBytes) {
-                @Override
-                public String getFilename() {
-                    return "test-avatar.jpg";
-                }
-            };
-            multipartBodyBuilder.part("avatar", avatarResource, MediaType.IMAGE_JPEG);
+        byte[] avatarBytes = "avatar".getBytes();
+        ByteArrayResource avatarResource = new ByteArrayResource(avatarBytes) {
+            @Override
+            public String getFilename() {
+                return "test-avatar.jpg";
+            }
+        };
+        multipartBodyBuilder.part("avatar", avatarResource, MediaType.IMAGE_JPEG);
 
-            restTestClient
-                    .post()
-                    .uri("/api/v1/auth/sign-up")
-                    .body(multipartBodyBuilder.build())
-                    .exchange()
-                    .expectStatus().isBadRequest()
-                    .expectBody();
+        restTestClient
+                .post()
+                .uri("/api/v1/auth/sign-up")
+                .body(multipartBodyBuilder.build())
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody();
 
-            verifyNoInteractions(s3Service, emailService);
-        }
+        verifyNoInteractions(s3Service, emailService);
+    }
 
-        @Test
-        void shouldReturn400IfAvatarHasUnsupportedContentTypeOnSignUp() {
-            MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-            multipartBodyBuilder.part("dto", new AuthRequestDTO(
-                    "new-user3@gmail.com",
-                    "12345678",
-                    "New User",
-                    CurrencyCode.USD
-            ), MediaType.APPLICATION_JSON);
+    @Test
+    void shouldReturn400IfAvatarHasUnsupportedContentTypeOnSignUp() {
+        MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+                "new-user3@gmail.com",
+                "12345678",
+                "New User",
+                CurrencyCode.USD
+        ), MediaType.APPLICATION_JSON);
 
-            byte[] avatarBytes = "not-an-image".getBytes();
-            ByteArrayResource avatarResource = new ByteArrayResource(avatarBytes) {
-                @Override
-                public String getFilename() {
-                    return "avatar.txt";
-                }
-            };
-            multipartBodyBuilder.part("avatar", avatarResource, MediaType.TEXT_PLAIN);
+        byte[] avatarBytes = "not-an-image".getBytes();
+        ByteArrayResource avatarResource = new ByteArrayResource(avatarBytes) {
+            @Override
+            public String getFilename() {
+                return "avatar.txt";
+            }
+        };
+        multipartBodyBuilder.part("avatar", avatarResource, MediaType.TEXT_PLAIN);
 
-            restTestClient
-                    .post()
-                    .uri("/api/v1/auth/sign-up")
-                    .body(multipartBodyBuilder.build())
-                    .exchange()
-                    .expectStatus().isBadRequest()
-                    .expectBody();
+        restTestClient
+                .post()
+                .uri("/api/v1/auth/sign-up")
+                .body(multipartBodyBuilder.build())
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody();
 
-            verifyNoInteractions(s3Service, emailService);
-        }
+        verifyNoInteractions(s3Service, emailService);
+    }
 
-        @Test
-        @Sql("/datasets/test_users.sql")
-        void shouldReturnAccessTokenIfUserIsLoggedSuccessfully() {
-            LoginRequestDto authDto = new LoginRequestDto("test@gmail.com", "12345678");
+    @Test
+    @Sql("/datasets/test_users.sql")
+    void shouldReturnAccessTokenIfUserIsLoggedSuccessfully() {
+        LoginRequestDto authDto = new LoginRequestDto("test@gmail.com", "12345678");
 
-            restTestClient
-                    .post()
-                    .uri("/api/v1/auth/login")
-                    .body(authDto)
-                    .exchange()
-                    .expectStatus().isOk()
-                    .expectBody()
-                    .jsonPath("$.accessToken").isNotEmpty();
-        }
+        restTestClient
+                .post()
+                .uri("/api/v1/auth/login")
+                .body(authDto)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.accessToken").isNotEmpty();
+    }
 
-        @Test
-        @Sql("/datasets/test_users.sql")
-        void shouldReturn401IfPasswordIsIncorrect() {
-            LoginRequestDto authDto = new LoginRequestDto("test@gmail.com", "wrongpassword");
+    @Test
+    @Sql("/datasets/test_users.sql")
+    void shouldReturn401IfPasswordIsIncorrect() {
+        LoginRequestDto authDto = new LoginRequestDto("test@gmail.com", "wrongpassword");
 
-            restTestClient
-                    .post()
-                    .uri("/api/v1/auth/login")
-                    .body(authDto)
-                    .exchange()
-                    .expectStatus().isUnauthorized()
-                    .expectBody()
-                    .jsonPath("$.detail").isEqualTo("Invalid credentials. Password does not match!");
-        }
+        restTestClient
+                .post()
+                .uri("/api/v1/auth/login")
+                .body(authDto)
+                .exchange()
+                .expectStatus().isUnauthorized()
+                .expectBody()
+                .jsonPath("$.detail").isEqualTo("Invalid credentials. Password does not match!");
+    }
 
-        @Test
-        @Sql("/datasets/test_users.sql")
-        void shouldReturn401IfUserDoesNotExist() {
-            LoginRequestDto authDto = new LoginRequestDto("nonexistent@gmail.com", "12345678");
+    @Test
+    @Sql("/datasets/test_users.sql")
+    void shouldReturn401IfUserDoesNotExist() {
+        LoginRequestDto authDto = new LoginRequestDto("nonexistent@gmail.com", "12345678");
 
-            restTestClient
-                    .post()
-                    .uri("/api/v1/auth/login")
-                    .body(authDto)
-                    .exchange()
-                    .expectStatus().isUnauthorized()
-                    .expectBody()
-                    .jsonPath("$.detail").isEqualTo("User with email nonexistent@gmail.com does not exist.");
-        }
+        restTestClient
+                .post()
+                .uri("/api/v1/auth/login")
+                .body(authDto)
+                .exchange()
+                .expectStatus().isUnauthorized()
+                .expectBody()
+                .jsonPath("$.detail").isEqualTo("User with email nonexistent@gmail.com does not exist.");
+    }
 
     @Test
     @Sql("/datasets/test_users.sql")

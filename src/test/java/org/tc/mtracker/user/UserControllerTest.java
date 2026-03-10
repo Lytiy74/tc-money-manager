@@ -14,10 +14,10 @@ import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.web.multipart.MultipartFile;
 import org.tc.mtracker.auth.EmailService;
-import org.tc.mtracker.user.dto.RequestUpdateUserEmailDTO;
 import org.tc.mtracker.currency.CurrencyCode;
-import org.tc.mtracker.user.dto.UpdateUserPasswordRequestDTO;
-import org.tc.mtracker.user.dto.UpdateUserProfileDTO;
+import org.tc.mtracker.user.dto.RequestUpdateUserEmailDTO;
+import org.tc.mtracker.user.dto.RequestUpdateUserPasswordDTO;
+import org.tc.mtracker.user.dto.RequestUpdateUserProfileDTO;
 import org.tc.mtracker.utils.S3Service;
 import org.tc.mtracker.utils.TestHelpers;
 import org.testcontainers.containers.MySQLContainer;
@@ -70,7 +70,7 @@ class UserControllerTest {
         String newFullname = "New Fullname";
         CurrencyCode newCC = CurrencyCode.UAH;
         String token = testHelpers.generateTestToken(email, "access_token", 3600000);
-        UpdateUserProfileDTO updateDto = new UpdateUserProfileDTO(newFullname, newCC);
+        RequestUpdateUserProfileDTO updateDto = new RequestUpdateUserProfileDTO(newFullname, newCC);
 
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
         multipartBodyBuilder.part("dto", updateDto, MediaType.APPLICATION_JSON);
@@ -95,7 +95,7 @@ class UserControllerTest {
         String email = "test@gmail.com";
         String newFullname = "";
         String token = testHelpers.generateTestToken(email, "access_token", 3600000);
-        UpdateUserProfileDTO updateDto = new UpdateUserProfileDTO(newFullname, null);
+        RequestUpdateUserProfileDTO updateDto = new RequestUpdateUserProfileDTO(newFullname, null);
 
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
         multipartBodyBuilder.part("dto", updateDto, MediaType.APPLICATION_JSON);
@@ -113,7 +113,7 @@ class UserControllerTest {
     @Sql("/datasets/test_users.sql")
     void shouldReturn400WhenFullNameIsTooShort() {
         String token = testHelpers.generateTestToken("test@gmail.com", "access_token", 3600000);
-        UpdateUserProfileDTO updateDto = new UpdateUserProfileDTO("", null);
+        RequestUpdateUserProfileDTO updateDto = new RequestUpdateUserProfileDTO("", null);
 
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
         multipartBodyBuilder.part("dto", updateDto, MediaType.APPLICATION_JSON);
@@ -131,7 +131,7 @@ class UserControllerTest {
     @Sql("/datasets/test_users.sql")
     void shouldReturn400WhenFullNameIsTooLong() {
         String token = testHelpers.generateTestToken("test@gmail.com", "access_token", 3600000);
-        UpdateUserProfileDTO updateDto = new UpdateUserProfileDTO("a".repeat(129), null);
+        RequestUpdateUserProfileDTO updateDto = new RequestUpdateUserProfileDTO("a".repeat(129), null);
 
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
         multipartBodyBuilder.part("dto", updateDto, MediaType.APPLICATION_JSON);
@@ -359,7 +359,8 @@ class UserControllerTest {
                 .expectBody()
                 .jsonPath("$.email").isEqualTo(email)
                 .jsonPath("$.fullName").isEqualTo("Active User")
-                .jsonPath("$.currencyCode").isEqualTo("USD");
+                .jsonPath("$.currencyCode").isEqualTo("USD")
+                .jsonPath("$.createdAt").isNotEmpty();
     }
 
     @Test
@@ -375,7 +376,7 @@ class UserControllerTest {
     @Sql("/datasets/test_users.sql")
     void shouldReturn200WhenPasswordUpdated() {
         String accessToken = testHelpers.generateTestToken("test@gmail.com", "access_token", 3600000);
-        UpdateUserPasswordRequestDTO dto = new UpdateUserPasswordRequestDTO("12345678", "newPassword", "newPassword");
+        RequestUpdateUserPasswordDTO dto = new RequestUpdateUserPasswordDTO("12345678", "newPassword", "newPassword");
 
         restTestClient
                 .put()
@@ -390,7 +391,7 @@ class UserControllerTest {
     @Sql("/datasets/test_users.sql")
     void shouldReturn400WhenCurrentPasswordIsInvalid() {
         String accessToken = testHelpers.generateTestToken("test@gmail.com", "access_token", 3600000);
-        UpdateUserPasswordRequestDTO dto = new UpdateUserPasswordRequestDTO("87654321", "newPassword", "newPassword");
+        RequestUpdateUserPasswordDTO dto = new RequestUpdateUserPasswordDTO("87654321", "newPassword", "newPassword");
 
         restTestClient
                 .put()
@@ -405,7 +406,7 @@ class UserControllerTest {
     @Sql("/datasets/test_users.sql")
     void shouldReturn400WhenPasswordIsShort() {
         String accessToken = testHelpers.generateTestToken("test@gmail.com", "access_token", 3600000);
-        UpdateUserPasswordRequestDTO dto = new UpdateUserPasswordRequestDTO("87654321", "new", "new");
+        RequestUpdateUserPasswordDTO dto = new RequestUpdateUserPasswordDTO("87654321", "new", "new");
 
         restTestClient
                 .put()

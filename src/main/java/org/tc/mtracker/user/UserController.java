@@ -16,7 +16,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.tc.mtracker.user.dto.*;
+import org.tc.mtracker.user.dto.RequestUpdateUserEmailDTO;
+import org.tc.mtracker.user.dto.RequestUpdateUserPasswordDTO;
+import org.tc.mtracker.user.dto.RequestUpdateUserProfileDTO;
+import org.tc.mtracker.user.dto.ResponseUserDTO;
 import org.tc.mtracker.user.image.ValidImage;
 
 @RestController
@@ -35,7 +38,7 @@ public class UserController {
             description = "User's data updated successfully",
             content = @Content(
                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                    schema = @Schema(implementation = ResponseUserProfileDTO.class)
+                    schema = @Schema(implementation = ResponseUserDTO.class)
             )
     )
     @ApiResponse(
@@ -54,14 +57,14 @@ public class UserController {
             )
     )
     @PutMapping(value = "/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ResponseUserProfileDTO> updateMe(
+    public ResponseEntity<ResponseUserDTO> updateMe(
             @Parameter(
                     name = "User profile update DTO",
                     required = false,
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE)
             )
             @Valid
-            @RequestPart(name = "dto", required = false) UpdateUserProfileDTO dto,
+            @RequestPart(name = "dto", required = false) RequestUpdateUserProfileDTO dto,
             @Parameter(
                     name = "avatar",
                     required = false,
@@ -74,13 +77,13 @@ public class UserController {
             @RequestParam(name = "avatar", required = false) MultipartFile avatar,
             @Parameter(hidden = true) Authentication auth
     ) {
-        ResponseUserProfileDTO responseUserProfileDTO = userService.updateProfile(dto, avatar, auth);
+        ResponseUserDTO responseUserProfileDTO = userService.updateProfile(dto, avatar, auth);
         return ResponseEntity.ok()
                 .body(responseUserProfileDTO);
     }
 
     @PostMapping(value = "/me/update-email")
-    public ResponseEntity<ResponseUserProfileDTO> updateEmail(
+    public ResponseEntity<ResponseUserDTO> updateEmail(
             @RequestBody RequestUpdateUserEmailDTO dto,
             @Parameter(hidden = true) Authentication auth) {
         userService.updateEmail(dto, auth);
@@ -111,7 +114,7 @@ public class UserController {
     )
     @PutMapping(value = "/me/update-password")
     public ResponseEntity<Void> updatePassword(
-            @RequestBody @Valid UpdateUserPasswordRequestDTO dto,
+            @RequestBody @Valid RequestUpdateUserPasswordDTO dto,
             @Parameter(hidden = true) Authentication auth) {
         userService.updatePassword(dto, auth);
         return ResponseEntity.ok().build();
@@ -125,7 +128,7 @@ public class UserController {
 
     @ApiResponse(responseCode = "200", description = "User profile returned",
             content = @Content(mediaType = "application/json",
-                    schema = @Schema(implementation = UserResponseDTO.class)))
+                    schema = @Schema(implementation = ResponseUserDTO.class)))
     @ApiResponse(responseCode = "400", description = "User not found",
             content = @Content(mediaType = "application/json",
                     examples = @ExampleObject(value = "User with username 'Alex Noob' not found")))
@@ -139,7 +142,7 @@ public class UserController {
             content = @Content(mediaType = "application/json",
                     examples = @ExampleObject(value = "Internal error: NullPointerException")))
     @GetMapping("/me")
-    public ResponseEntity<UserResponseDTO> getUserProfile(Authentication auth) {
+    public ResponseEntity<ResponseUserDTO> getUserProfile(Authentication auth) {
         return ResponseEntity.ok(userService.getUser(auth));
     }
 }

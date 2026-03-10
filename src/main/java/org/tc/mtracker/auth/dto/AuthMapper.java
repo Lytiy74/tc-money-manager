@@ -8,5 +8,6 @@ import org.tc.mtracker.user.User;
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface AuthMapper {
     @Mapping(target = "avatarUrl", source = "avatarUrl")
+    @Mapping(target = "isActivated", source = "user.activated")
     AuthResponseDTO toAuthResponseDTO(User user, String avatarUrl);
 }
