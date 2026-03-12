@@ -14,11 +14,14 @@ public record AuthRequestDTO(
         @NotBlank @Email String email,
 
         @Schema(
-                description = "User's password (min 8 chars).",
-                example = "Example8",
+                description = "User's password (min 8 chars) at least one uppercase character, " +
+                        "at least one lowercase character, at least one digit, without spaces.",
+                example = "Example8!",
                 format = "password"
         )
-        @NotBlank @Length(min = 8, max = 256) String password,
+        @NotBlank @Length(min = 8, max = 256)
+        @Pattern(regexp = "^((?=\\S*?[A-Z])(?=\\S*?[a-z])(?=\\S*?[0-9]).{8,})\\S$")
+        String password,
 
         @Schema(description = "User's full name", example = "Abraham Lincoln")
         @NotBlank @Length(min = 1, max = 128) String fullName,

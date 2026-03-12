@@ -73,7 +73,7 @@ class AuthControllerTest {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
         multipartBodyBuilder.part("dto", new AuthRequestDTO(
                 "new1-user@gmail.com",
-                "12345678",
+                "validStrongPassword!1",
                 "New1 User",
                 CurrencyCode.USD
         ), MediaType.APPLICATION_JSON);
@@ -105,7 +105,7 @@ class AuthControllerTest {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
         multipartBodyBuilder.part("dto", new AuthRequestDTO(
                 "new-user@gmail.com",
-                "12345678",
+                "newValidPassword!123",
                 "New User",
                 CurrencyCode.USD
         ), MediaType.APPLICATION_JSON);
@@ -195,6 +195,79 @@ class AuthControllerTest {
 
         verifyNoInteractions(s3Service, emailService);
     }
+
+    @Test
+    void shouldReturn400IfPasswordFieldIsEmptyOnSignUp() {
+        MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+                "test@test.com",
+                "",
+                "Test User",
+                CurrencyCode.USD
+        ));
+
+        restTestClient
+                .post()
+                .uri("/api/v1/auth/sign-up")
+                .body(multipartBodyBuilder.build())
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void shouldReturn400IsLessThen8CharactersOnSignUp() {
+        MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+                "test@test.com",
+                "Pass12!",
+                "Test User",
+                CurrencyCode.USD
+        ));
+
+        restTestClient
+                .post()
+                .uri("/api/v1/auth/sign-up")
+                .body(multipartBodyBuilder.build())
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void shouldReturn400IsNotContainsUppercaseOnSignUp() {
+        MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+                "test@test.com",
+                "validpassword1!",
+                "Test User",
+                CurrencyCode.USD
+        ));
+
+        restTestClient
+                .post()
+                .uri("/api/v1/auth/sign-up")
+                .body(multipartBodyBuilder.build())
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void shouldReturn400IsNotContainsLowercaseOnSignUp() {
+        MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+                "test@test.com",
+                "VALIDPASSWORD1!",
+                "Test User",
+                CurrencyCode.USD
+        ));
+
+        restTestClient
+                .post()
+                .uri("/api/v1/auth/sign-up")
+                .body(multipartBodyBuilder.build())
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
+
 
     @Test
     @Sql("/datasets/test_users.sql")
