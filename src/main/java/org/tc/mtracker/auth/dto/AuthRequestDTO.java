@@ -24,7 +24,9 @@ public record AuthRequestDTO(
         String password,
 
         @Schema(description = "User's full name", example = "Abraham Lincoln")
-        @NotBlank @Length(min = 1, max = 128) String fullName,
+        @NotBlank @Length(min = 3, max = 35)
+        @Pattern(regexp = "^[a-zA-zА-Яа-я]* ?[a-zA-zА-Яа-я]*$")
+        String fullName,
 
         @Schema(description = "User's main currency (ISO 4217)", example = "USD")
         @NotNull CurrencyCode currencyCode
