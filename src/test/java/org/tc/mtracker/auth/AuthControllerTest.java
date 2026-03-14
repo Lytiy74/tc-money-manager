@@ -74,7 +74,7 @@ class AuthControllerTest {
         multipartBodyBuilder.part("dto", new AuthRequestDTO(
                 "new1-user@gmail.com",
                 "validStrongPassword!1",
-                "New1 User",
+                "NewOne User",
                 CurrencyCode.USD
         ), MediaType.APPLICATION_JSON);
 
@@ -86,7 +86,7 @@ class AuthControllerTest {
                 .expectStatus().isCreated()
                 .expectBody()
                 .jsonPath("$.id").isNotEmpty()
-                .jsonPath("$.fullName").isEqualTo("New1 User")
+                .jsonPath("$.fullName").isEqualTo("NewOne User")
                 .jsonPath("$.email").isEqualTo("new1-user@gmail.com")
                 .jsonPath("$.currencyCode").isEqualTo("USD")
                 .jsonPath("$.avatarUrl").isEmpty()
@@ -96,6 +96,24 @@ class AuthControllerTest {
         verifyNoInteractions(s3Service);
         verify(emailService, times(1)).sendVerificationEmail(any());
         verifyNoMoreInteractions(emailService);
+    }
+
+    @Test
+    void shouldReturn201WithCyrillicFullName() {
+        MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+                "new1-user@gmail.com",
+                "validStrongPassword!1",
+                "Батько Батькович",
+                CurrencyCode.USD
+        ), MediaType.APPLICATION_JSON);
+
+        restTestClient
+                .post()
+                .uri("/api/v1/auth/sign-up")
+                .body(multipartBodyBuilder.build())
+                .exchange()
+                .expectStatus().isCreated();
     }
 
     @Test
@@ -195,6 +213,61 @@ class AuthControllerTest {
 
         verifyNoInteractions(s3Service, emailService);
     }
+
+    @Test
+    void shouldReturn400IfFullNameIsShorterThanBoundOfLength() {
+        MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+                "Test7@gmail.com",
+                "ABc123456!",
+                "Aa",
+                CurrencyCode.USD
+        ));
+
+        restTestClient
+                .post()
+                .uri("/api/v1/auth/sign-up")
+                .body(multipartBodyBuilder.build())
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void shouldReturn400IfFullNameIsLongerThanBoundOfLength() {
+        MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+                "Test7@gmail.com",
+                "ABc123456!",
+                "qweqweqweqewqweqweqweqweqweqweqweqweqweqweqweqeqeqwewqeqweqweqweqe",
+                CurrencyCode.USD
+        ));
+
+        restTestClient
+                .post()
+                .uri("/api/v1/auth/sign-up")
+                .body(multipartBodyBuilder.build())
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void shouldReturn400IfFullNameIsNotContainsLatinOrCyrilicSymbols() {
+        MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+                "Test7@gmail.com",
+                "ABc123456!",
+                "1234567890",
+                CurrencyCode.USD
+        ));
+
+        restTestClient
+                .post()
+                .uri("/api/v1/auth/sign-up")
+                .body(multipartBodyBuilder.build())
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
+
 
     @Test
     void shouldReturn400IfPasswordFieldIsEmptyOnSignUp() {
