@@ -306,6 +306,42 @@ class AuthControllerTest {
     }
 
     @Test
+    void shouldReturn400IsMoreThen72CharactersOnSignUp() {
+        MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+                "test@test.com",
+                "Pass12!",
+                "Test User",
+                CurrencyCode.USD
+        ));
+
+        restTestClient
+                .post()
+                .uri("/api/v1/auth/sign-up")
+                .body(multipartBodyBuilder.build())
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void shouldReturn201WhenPasswordLength72CharactersOnSignUp() {
+        MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+                "test@test.com",
+                "3XqgtwJeRa76TbRKxApPaXeahvr4eVUKHPe7Sm2ai0R7dxXxPhb0GRFnXf5PL2GfjaQ3Uf9U",
+                "Test User",
+                CurrencyCode.USD
+        ));
+
+        restTestClient
+                .post()
+                .uri("/api/v1/auth/sign-up")
+                .body(multipartBodyBuilder.build())
+                .exchange()
+                .expectStatus().isCreated();
+    }
+
+    @Test
     void shouldReturn400IsNotContainsUppercaseOnSignUp() {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
         multipartBodyBuilder.part("dto", new AuthRequestDTO(
