@@ -30,6 +30,8 @@ public class TransactionService {
 
         Transaction transaction = transactionMapper.toEntity(createRequestDTO, user);
         Category category = categoryService.findById(createRequestDTO.categoryId());
+        if (!category.getType().equals(createRequestDTO.type()))
+            throw new IllegalArgumentException("Category type does not match transaction type");
 
         transaction.setUser(user);
         transaction.setCategory(category);

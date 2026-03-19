@@ -2,7 +2,7 @@ package org.tc.mtracker.category.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.tc.mtracker.category.enums.CategoryStatus;
-import org.tc.mtracker.category.enums.CategoryType;
+import org.tc.mtracker.common.enums.MoneyFlowType;
 
 @Schema(description = "Get Category")
 public record CategoryResponseDTO(
@@ -11,7 +11,7 @@ public record CategoryResponseDTO(
         String name,
 
         @Schema(description = "Type", example = "Income")
-        CategoryType type,
+        MoneyFlowType type,
 
         @Schema(description = "Status", example = "Active")
         CategoryStatus status,

@@ -6,6 +6,7 @@ import lombok.experimental.FieldNameConstants;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.tc.mtracker.category.Category;
+import org.tc.mtracker.common.enums.MoneyFlowType;
 import org.tc.mtracker.user.User;
 
 import java.math.BigDecimal;
@@ -31,7 +32,8 @@ public class Transaction {
     @JoinColumn(name = "user_id")
     private User user;
 
-    private TransactionType type;
+    @Enumerated(EnumType.STRING)
+    private MoneyFlowType type;
 
     @Setter
     @ManyToOne(fetch = FetchType.LAZY)

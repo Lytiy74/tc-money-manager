@@ -1,5 +1,6 @@
 package org.tc.mtracker.transaction;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -19,7 +20,7 @@ public class TransactionController {
     @PostMapping
     public ResponseEntity<TransactionResponseDTO> createTransaction(
             Authentication auth, @RequestBody
-            TransactionCreateRequestDTO createRequestDTO) {
+            @Valid TransactionCreateRequestDTO createRequestDTO) {
         TransactionResponseDTO transactionResponseDTO = transactionService.saveTransaction(auth, createRequestDTO);
         return ResponseEntity.ok(transactionResponseDTO);
     }

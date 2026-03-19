@@ -17,7 +17,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.tc.mtracker.category.dto.CategoryResponseDTO;
 import org.tc.mtracker.category.dto.CreateCategoryDTO;
-import org.tc.mtracker.category.enums.CategoryType;
+import org.tc.mtracker.common.enums.MoneyFlowType;
 
 import java.util.List;
 
@@ -57,7 +57,7 @@ public class CategoryController  {
     @GetMapping
     public ResponseEntity<List<CategoryResponseDTO>> getCategories(
             @RequestParam("name") String name,
-            @RequestParam("type") List<CategoryType> type,
+            @RequestParam("type") List<MoneyFlowType> type,
             @Parameter(hidden = true) Authentication auth
     ) {
 

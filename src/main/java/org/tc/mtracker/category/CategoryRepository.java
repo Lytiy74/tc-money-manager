@@ -4,7 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import org.tc.mtracker.category.enums.CategoryType;
+import org.tc.mtracker.common.enums.MoneyFlowType;
 import org.tc.mtracker.user.User;
 
 import java.util.List;
@@ -21,7 +21,7 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     List<Category> findGlobalAndUserCategories(
             @Param("user") User user,
             @Param("name") String name,
-            @Param("types") List<CategoryType> types
+            @Param("types") List<MoneyFlowType> types
     );
 
     @Query("""
