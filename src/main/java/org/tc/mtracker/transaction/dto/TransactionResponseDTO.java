@@ -4,11 +4,18 @@ import org.tc.mtracker.category.dto.CategoryResponseDTO;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 
 public record TransactionResponseDTO(
         BigDecimal amount,
         CategoryResponseDTO category,
-        LocalDate date
+        String description,
+        String type,
+        List<String> receiptsUrls,
+        LocalDate date,
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
 ) {
 
 }

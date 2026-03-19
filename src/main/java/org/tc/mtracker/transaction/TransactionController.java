@@ -17,7 +17,9 @@ public class TransactionController {
     private final TransactionService transactionService;
 
     @PostMapping
-    public ResponseEntity<TransactionResponseDTO> createTransaction(Authentication auth, @RequestBody TransactionCreateRequestDTO createRequestDTO) {
+    public ResponseEntity<TransactionResponseDTO> createTransaction(
+            Authentication auth, @RequestBody
+            TransactionCreateRequestDTO createRequestDTO) {
         TransactionResponseDTO transactionResponseDTO = transactionService.saveTransaction(auth, createRequestDTO);
         return ResponseEntity.ok(transactionResponseDTO);
     }

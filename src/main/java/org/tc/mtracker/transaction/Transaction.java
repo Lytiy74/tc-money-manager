@@ -2,6 +2,7 @@ package org.tc.mtracker.transaction;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.FieldNameConstants;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.tc.mtracker.category.Category;
@@ -16,8 +17,9 @@ import java.util.List;
 @Table(name = "transactions")
 @RequiredArgsConstructor
 @AllArgsConstructor
-@Builder
 @Getter
+@Builder
+@FieldNameConstants
 public class Transaction {
 
     @Id
@@ -40,7 +42,8 @@ public class Transaction {
     private String description;
 
     @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL)
-    private List<ReceiptImage> receipts;
+    @Builder.Default
+    private List<ReceiptImage> receipts = List.of();
 
     private LocalDate date;
 

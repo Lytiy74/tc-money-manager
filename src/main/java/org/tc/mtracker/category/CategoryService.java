@@ -1,7 +1,6 @@
 package org.tc.mtracker.category;
 
 import lombok.RequiredArgsConstructor;
-import org.mapstruct.Named;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.tc.mtracker.category.dto.CategoryResponseDTO;
@@ -35,7 +34,6 @@ public class CategoryService {
         return categoryMapper.toListDto(categories);
     }
 
-    @Named("categoryById")
     public Category findById(Long id) {
         return categoryRepository.findById(id).orElseThrow();
     }
