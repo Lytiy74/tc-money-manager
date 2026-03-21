@@ -9,6 +9,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.tc.mtracker.account.Account;
+import org.tc.mtracker.account.AccountRepository;
 import org.tc.mtracker.auth.dto.*;
 import org.tc.mtracker.security.CustomUserDetails;
 import org.tc.mtracker.security.JwtResponseDTO;
@@ -22,6 +24,7 @@ import org.tc.mtracker.utils.exceptions.UserAlreadyExistsException;
 import org.tc.mtracker.utils.exceptions.UserNotActivatedException;
 import org.tc.mtracker.utils.exceptions.UserResetPasswordException;
 
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.UUID;
 
@@ -34,6 +37,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final UserService userService;
+    private final AccountRepository accountRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
@@ -48,7 +52,7 @@ public class AuthService {
             throw new UserAlreadyExistsException("User with this email already exists");
         }
 
-        String imageKey = UUID.randomUUID().toString();
+        String imageKey = (avatar == null || avatar.isEmpty()) ? null : UUID.randomUUID().toString();
         String avatarUrl = uploadAvatar(imageKey, avatar);
 
         User user = User.builder()
@@ -61,7 +65,17 @@ public class AuthService {
                 .build();
         User savedUser = userService.save(user);
 
-        emailService.sendVerificationEmail(user);
+        Account defaultAccount = Account.builder()
+                .user(savedUser)
+                .balance(BigDecimal.ZERO)
+                .build();
+        Account savedDefaultAccount = accountRepository.save(defaultAccount);
+
+        savedUser.addAccount(savedDefaultAccount);
+        savedUser.setDefaultAccount(savedDefaultAccount);
+        savedUser = userService.save(savedUser);
+
+        emailService.sendVerificationEmail(savedUser);
         log.info("User with id {} is registered successfully.", savedUser.getId());
         return authMapper.toAuthResponseDTO(savedUser, avatarUrl);
     }
@@ -167,7 +181,7 @@ public class AuthService {
 
 
     private @Nullable String uploadAvatar(String imageKey, MultipartFile avatar) {
-        if (avatar == null || avatar.isEmpty()) {
+        if (imageKey == null || avatar == null || avatar.isEmpty()) {
             return null;
         }
 
@@ -175,5 +189,4 @@ public class AuthService {
         return imageService.generatePresignedUrl(imageKey);
     }
 }
-
 

@@ -5,15 +5,21 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.tc.mtracker.account.Account;
 import org.tc.mtracker.category.Category;
 import org.tc.mtracker.category.CategoryService;
+import org.tc.mtracker.category.enums.CategoryStatus;
+import org.tc.mtracker.common.enums.MoneyFlowType;
 import org.tc.mtracker.transaction.dto.TransactionCreateRequestDTO;
 import org.tc.mtracker.transaction.dto.TransactionMapper;
 import org.tc.mtracker.transaction.dto.TransactionResponseDTO;
 import org.tc.mtracker.user.User;
 import org.tc.mtracker.user.UserService;
 import org.tc.mtracker.utils.S3Service;
+import org.tc.mtracker.utils.exceptions.CategoryIsNotActiveException;
+import org.tc.mtracker.utils.exceptions.MoneyFlowTypeMismatchException;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,21 +35,48 @@ public class TransactionService {
     @Transactional
     public TransactionResponseDTO saveTransaction(Authentication auth, TransactionCreateRequestDTO createRequestDTO, List<MultipartFile> receipts) {
         User user = userService.getCurrentAuthenticatedUser(auth);
+        Account account = resolveDefaultAccount(user);
 
         Transaction transaction = transactionMapper.toEntity(createRequestDTO, user);
-        Category category = categoryService.findById(createRequestDTO.categoryId());
+        Category category = getCategory(createRequestDTO);
 
         validateTransactionType(createRequestDTO, category);
 
         transaction.setUser(user);
+        transaction.setAccount(account);
         transaction.setCategory(category);
         addReceiptsToTransaction(receipts, transaction);
 
+
         Transaction saved = transactionRepository.save(transaction);
+        applyBalanceDelta(account, saved);
 
         List<String> presignedUrls = generatePresignedUrlsForReceipts(saved);
 
         return transactionMapper.toDto(saved, presignedUrls);
+    }
+
+    private static Account resolveDefaultAccount(User user) {
+        Account defaultAccount = user.getDefaultAccount();
+        if (defaultAccount == null) {
+            throw new IllegalStateException("Current user does not have default account");
+        }
+        return defaultAccount;
+    }
+
+    private Category getCategory(TransactionCreateRequestDTO createRequestDTO) {
+        Category category = categoryService.findById(createRequestDTO.categoryId());
+        if (!category.getStatus().equals(CategoryStatus.ACTIVE))
+            throw new CategoryIsNotActiveException("Category is not active");
+        return category;
+    }
+
+    private static void applyBalanceDelta(Account account, Transaction transaction) {
+        BigDecimal currentBalance = account.getBalance() == null ? BigDecimal.ZERO : account.getBalance();
+        BigDecimal delta = transaction.getType() == MoneyFlowType.INCOME
+                ? transaction.getAmount()
+                : transaction.getAmount().negate();
+        account.setBalance(currentBalance.add(delta));
     }
 
     private void addReceiptsToTransaction(List<MultipartFile> receipts, Transaction transaction) {
@@ -68,7 +101,7 @@ public class TransactionService {
 
     private static void validateTransactionType(TransactionCreateRequestDTO createRequestDTO, Category category) {
         if (!category.getType().equals(createRequestDTO.type())) {
-            throw new IllegalArgumentException("Category type does not match transaction type");
+            throw new MoneyFlowTypeMismatchException("Category type does not match transaction type");
         }
     }
 

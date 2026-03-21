@@ -96,4 +96,16 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleUserNotActivatedException(UserNotActivatedException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
     }
+
+    @ExceptionHandler(CategoryIsNotActiveException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ProblemDetail handleCategoryIsNotActiveException(CategoryIsNotActiveException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(MoneyFlowTypeMismatchException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ProblemDetail handleMoneyFlowTypeMismatchException(MoneyFlowTypeMismatchException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
 }

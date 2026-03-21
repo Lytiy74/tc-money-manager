@@ -13,6 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.jdbc.Sql;
+import org.springframework.test.context.jdbc.SqlMergeMode;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.web.multipart.MultipartFile;
 import org.tc.mtracker.common.enums.MoneyFlowType;
@@ -169,6 +170,24 @@ class TransactionControllerTest {
         verifyNoInteractions(s3Service);
     }
 
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql(statements = "INSERT INTO categories (id, name, type, status, user_id, created_at, updated_at) " +
+            "VALUES (5, 'Archived Hobby', 'INCOME', 'ARCHIVED', 1, NOW(), NOW())")
+    void shouldReturn400WhenCategoryIsArchived() {
+        MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+        multipartBodyBuilder.part("dto", buildDtoWithInvalidCategory(), MediaType.APPLICATION_JSON);
+
+        restTestClient.post()
+                .uri("/api/v1/transactions")
+                .body(multipartBodyBuilder.build())
+                .header(HttpHeaders.AUTHORIZATION, authToken)
+                .exchange()
+                .expectStatus().isBadRequest();
+
+        verifyNoInteractions(s3Service);
+    }
+
     private static TransactionCreateRequestDTO buildValidDto() {
         return new TransactionCreateRequestDTO(
                 BigDecimal.valueOf(1.0),
@@ -178,6 +197,17 @@ class TransactionControllerTest {
                 "Shop"
         );
     }
+
+    private static TransactionCreateRequestDTO buildDtoWithInvalidCategory() {
+        return new TransactionCreateRequestDTO(
+                BigDecimal.valueOf(1.0),
+                MoneyFlowType.INCOME,
+                5L,
+                LocalDate.now(),
+                "Shop"
+        );
+    }
+
 
     private static ByteArrayResource buildResource(String filename, String content) {
         return new ByteArrayResource(content.getBytes(StandardCharsets.UTF_8)) {

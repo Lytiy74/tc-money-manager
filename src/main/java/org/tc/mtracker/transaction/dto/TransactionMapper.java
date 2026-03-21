@@ -16,6 +16,7 @@ public interface TransactionMapper {
     @Mappings({
             @Mapping(target = Transaction.Fields.id, ignore = true),
             @Mapping(target = Transaction.Fields.user, source = "user"),
+            @Mapping(target = Transaction.Fields.account, ignore = true),
             @Mapping(target = Transaction.Fields.category, ignore = true),
             @Mapping(target = Transaction.Fields.createdAt, ignore = true),
             @Mapping(target = Transaction.Fields.updatedAt, ignore = true),
