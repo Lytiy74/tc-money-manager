@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -56,6 +57,6 @@ public class TransactionController {
             @Size(max = 10)
             List<@ValidReceiptFile MultipartFile> receipts) {
         TransactionResponseDTO transactionResponseDTO = transactionService.saveTransaction(auth, createRequestDTO, receipts);
-        return ResponseEntity.ok(transactionResponseDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(transactionResponseDTO);
     }
 }

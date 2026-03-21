@@ -14,7 +14,7 @@ import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import org.tc.mtracker.category.dto.CategoryResponseDTO;
 import org.tc.mtracker.category.dto.CreateCategoryDTO;
-import org.tc.mtracker.category.enums.CategoryType;
+import org.tc.mtracker.common.enums.MoneyFlowType;
 import org.tc.mtracker.utils.S3Service;
 import org.tc.mtracker.utils.TestHelpers;
 import org.testcontainers.containers.MySQLContainer;
@@ -71,7 +71,7 @@ class CategoryControllerTest {
                 .uri(uriBuilder -> uriBuilder
                         .path("/api/v1/categories")
                         .queryParam("name", "")
-                        .queryParam("type", CategoryType.INCOME, CategoryType.EXPENSE)
+                        .queryParam("type", MoneyFlowType.INCOME, MoneyFlowType.EXPENSE)
                         .build())
                 .header(HttpHeaders.AUTHORIZATION, authToken)
                 .exchange()
@@ -91,7 +91,7 @@ class CategoryControllerTest {
                 .uri(uriBuilder -> uriBuilder
                         .path("/api/v1/categories")
                         .queryParam("name", "sal") // Partial search for "Salary"
-                        .queryParam("type", CategoryType.INCOME)
+                        .queryParam("type", MoneyFlowType.INCOME)
                         .build())
                 .header(HttpHeaders.AUTHORIZATION, authToken)
                 .exchange()
@@ -108,7 +108,7 @@ class CategoryControllerTest {
                 .uri(uriBuilder -> uriBuilder
                         .path("/api/v1/categories")
                         .queryParam("name", "")
-                        .queryParam("type", CategoryType.EXPENSE)
+                        .queryParam("type", MoneyFlowType.EXPENSE)
                         .build())
                 .header(HttpHeaders.AUTHORIZATION, authToken)
                 .exchange()
@@ -120,7 +120,7 @@ class CategoryControllerTest {
 
     @Test
     void shouldCreateCategorySuccessfully() {
-        CreateCategoryDTO newCategory = new CreateCategoryDTO("Health", CategoryType.EXPENSE, "heart-pulse");
+        CreateCategoryDTO newCategory = new CreateCategoryDTO("Health", MoneyFlowType.EXPENSE, "heart-pulse");
 
         restTestClient
                 .post()
@@ -132,7 +132,7 @@ class CategoryControllerTest {
                 .expectBody(CategoryResponseDTO.class)
                 .value(response -> {
                     assertThat(response.name()).isEqualTo("Health");
-                    assertThat(response.type()).isEqualTo(CategoryType.EXPENSE);
+                    assertThat(response.type()).isEqualTo(MoneyFlowType.EXPENSE);
                     assertThat(response.icon()).isEqualTo("heart-pulse");
                 });
     }
@@ -140,7 +140,7 @@ class CategoryControllerTest {
     @Test
     void shouldReturnConflictWhenCategoryAlreadyExists() {
         // Assuming "Salary" / INCOME exists in your test_categories.sql
-        CreateCategoryDTO duplicate = new CreateCategoryDTO("Salary", CategoryType.INCOME, "money");
+        CreateCategoryDTO duplicate = new CreateCategoryDTO("Salary", MoneyFlowType.INCOME, "money");
 
         restTestClient
                 .post()
@@ -154,7 +154,7 @@ class CategoryControllerTest {
     @Test
     void shouldReturnBadRequestWhenNameIsMissing() {
         // Create a DTO that violates validation (if you have @NotBlank on name)
-        CreateCategoryDTO invalid = new CreateCategoryDTO("", CategoryType.EXPENSE, "icon");
+        CreateCategoryDTO invalid = new CreateCategoryDTO("", MoneyFlowType.EXPENSE, "icon");
 
         restTestClient
                 .post()
