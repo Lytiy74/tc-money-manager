@@ -3,7 +3,7 @@ package org.tc.mtracker.category.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import org.tc.mtracker.common.enums.MoneyFlowType;
+import org.tc.mtracker.common.enums.TransactionType;
 
 @Schema(description = "Create a new category")
 public record CreateCategoryDTO(
@@ -13,7 +13,7 @@ public record CreateCategoryDTO(
 
         @Schema(description = "Type", example = "Income")
         @NotNull(message = "Category's type should not be null")
-        MoneyFlowType type,
+        TransactionType type,
 
         @Schema(description = "Icon", example = "coin")
         String icon

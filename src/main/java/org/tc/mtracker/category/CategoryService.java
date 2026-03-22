@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 import org.tc.mtracker.category.dto.CategoryResponseDTO;
 import org.tc.mtracker.category.dto.CreateCategoryDTO;
 import org.tc.mtracker.category.enums.CategoryStatus;
-import org.tc.mtracker.common.enums.MoneyFlowType;
+import org.tc.mtracker.common.enums.TransactionType;
 import org.tc.mtracker.user.User;
 import org.tc.mtracker.user.UserService;
 import org.tc.mtracker.utils.exceptions.CategoryAlreadyExistsException;
@@ -22,7 +22,7 @@ public class CategoryService {
     private final CategoryMapper categoryMapper;
     private final UserService userService;
 
-    public List<CategoryResponseDTO> getCategories(String name, List<MoneyFlowType> types, Authentication auth) {
+    public List<CategoryResponseDTO> getCategories(String name, List<TransactionType> types, Authentication auth) {
         User currentUser = userService.getCurrentAuthenticatedUser(auth);
 
         List<Category> categories = categoryRepository.findGlobalAndUserCategories(

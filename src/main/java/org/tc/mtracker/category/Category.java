@@ -5,7 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.tc.mtracker.category.enums.CategoryStatus;
-import org.tc.mtracker.common.enums.MoneyFlowType;
+import org.tc.mtracker.common.enums.TransactionType;
 import org.tc.mtracker.user.User;
 
 import java.time.LocalDateTime;
@@ -28,7 +28,7 @@ public class Category {
 
     @Column(name = "type", nullable = false)
     @Enumerated(EnumType.STRING)
-    private MoneyFlowType type;
+    private TransactionType type;
 
     @Column(name = "icon")
     private String icon;

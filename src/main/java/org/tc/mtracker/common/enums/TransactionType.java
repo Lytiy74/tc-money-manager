@@ -1,6 +1,6 @@
 package org.tc.mtracker.common.enums;
 
-public enum MoneyFlowType {
+public enum TransactionType {
     INCOME,
     EXPENSE
 }

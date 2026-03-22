@@ -7,7 +7,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.tc.mtracker.account.Account;
 import org.tc.mtracker.category.Category;
-import org.tc.mtracker.common.enums.MoneyFlowType;
+import org.tc.mtracker.common.enums.TransactionType;
 import org.tc.mtracker.user.User;
 
 import java.math.BigDecimal;
@@ -40,7 +40,7 @@ public class Transaction {
     private Account account;
 
     @Enumerated(EnumType.STRING)
-    private MoneyFlowType type;
+    private TransactionType type;
 
     @Setter
     @ManyToOne(fetch = FetchType.LAZY)

@@ -9,7 +9,7 @@ import org.tc.mtracker.account.Account;
 import org.tc.mtracker.category.Category;
 import org.tc.mtracker.category.CategoryService;
 import org.tc.mtracker.category.enums.CategoryStatus;
-import org.tc.mtracker.common.enums.MoneyFlowType;
+import org.tc.mtracker.common.enums.TransactionType;
 import org.tc.mtracker.transaction.dto.TransactionCreateRequestDTO;
 import org.tc.mtracker.transaction.dto.TransactionMapper;
 import org.tc.mtracker.transaction.dto.TransactionResponseDTO;
@@ -73,7 +73,7 @@ public class TransactionService {
 
     private static void applyBalanceDelta(Account account, Transaction transaction) {
         BigDecimal currentBalance = account.getBalance() == null ? BigDecimal.ZERO : account.getBalance();
-        BigDecimal delta = transaction.getType() == MoneyFlowType.INCOME
+        BigDecimal delta = transaction.getType() == TransactionType.INCOME
                 ? transaction.getAmount()
                 : transaction.getAmount().negate();
         account.setBalance(currentBalance.add(delta));

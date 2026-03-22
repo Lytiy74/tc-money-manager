@@ -16,7 +16,7 @@ import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.SqlMergeMode;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.web.multipart.MultipartFile;
-import org.tc.mtracker.common.enums.MoneyFlowType;
+import org.tc.mtracker.common.enums.TransactionType;
 import org.tc.mtracker.transaction.dto.TransactionCreateRequestDTO;
 import org.tc.mtracker.utils.S3Service;
 import org.tc.mtracker.utils.TestHelpers;
@@ -191,7 +191,7 @@ class TransactionControllerTest {
     private static TransactionCreateRequestDTO buildValidDto() {
         return new TransactionCreateRequestDTO(
                 BigDecimal.valueOf(1.0),
-                MoneyFlowType.INCOME,
+                TransactionType.INCOME,
                 1L,
                 LocalDate.now(),
                 "Shop"
@@ -201,7 +201,7 @@ class TransactionControllerTest {
     private static TransactionCreateRequestDTO buildDtoWithInvalidCategory() {
         return new TransactionCreateRequestDTO(
                 BigDecimal.valueOf(1.0),
-                MoneyFlowType.INCOME,
+                TransactionType.INCOME,
                 5L,
                 LocalDate.now(),
                 "Shop"
