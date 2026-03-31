@@ -250,8 +250,11 @@ class CategoryControllerTest {
                 .header(HttpHeaders.AUTHORIZATION, authToken)
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$[?(@.id == 3)].length()").isEqualTo(1)
-                .jsonPath("$[?(@.id == 3)][0].status").isEqualTo("ARCHIVED");
+                .expectBody(CategoryResponseDTO[].class)
+                .value(categories -> assertThat(categories)
+                        .anySatisfy(category -> {
+                            assertThat(category.id()).isEqualTo(3L);
+                            assertThat(category.status()).isEqualTo(CategoryStatus.ARCHIVED);
+                        }));
     }
 }
