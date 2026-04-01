@@ -6,6 +6,8 @@ import org.tc.mtracker.common.enums.TransactionType;
 
 @Schema(description = "Get Category")
 public record CategoryResponseDTO(
+        @Schema(description = "Category ID", example = "1")
+        Long id,
 
         @Schema(description = "Name", example = "Salary")
         String name,

@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -14,6 +13,8 @@ import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import org.tc.mtracker.category.dto.CategoryResponseDTO;
 import org.tc.mtracker.category.dto.CreateCategoryDTO;
+import org.tc.mtracker.category.dto.UpdateCategoryDTO;
+import org.tc.mtracker.category.enums.CategoryStatus;
 import org.tc.mtracker.common.enums.TransactionType;
 import org.tc.mtracker.utils.S3Service;
 import org.tc.mtracker.utils.TestHelpers;
@@ -47,9 +48,6 @@ class CategoryControllerTest {
 
     @Autowired
     private RestTestClient restTestClient;
-
-    @Autowired
-    private Environment env;
 
     @MockitoBean
     private S3Service s3Service;
@@ -119,6 +117,48 @@ class CategoryControllerTest {
     }
 
     @Test
+    void shouldFilterCategoriesByArchivedStatus() {
+        restTestClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/v1/categories")
+                        .queryParam("type", TransactionType.INCOME, TransactionType.EXPENSE)
+                        .queryParam("archived", true)
+                        .build())
+                .header(HttpHeaders.AUTHORIZATION, authToken)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.length()").isEqualTo(1)
+                .jsonPath("$[0].name").isEqualTo("Archived Food")
+                .jsonPath("$[0].status").isEqualTo("ARCHIVED");
+    }
+
+    @Test
+    void shouldReturnCategoryByIdWhenAccessible() {
+        restTestClient
+                .get()
+                .uri("/api/v1/categories/1")
+                .header(HttpHeaders.AUTHORIZATION, authToken)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.name").isEqualTo("Salary")
+                .jsonPath("$.type").isEqualTo("INCOME")
+                .jsonPath("$.status").isEqualTo("ACTIVE");
+    }
+
+    @Test
+    void shouldReturnNotFoundForAnotherUsersCategoryById() {
+        restTestClient
+                .get()
+                .uri("/api/v1/categories/4")
+                .header(HttpHeaders.AUTHORIZATION, authToken)
+                .exchange()
+                .expectStatus().isNotFound();
+    }
+
+    @Test
     void shouldCreateCategorySuccessfully() {
         CreateCategoryDTO newCategory = new CreateCategoryDTO("Health", TransactionType.EXPENSE, "heart-pulse");
 
@@ -163,5 +203,58 @@ class CategoryControllerTest {
                 .body(invalid)
                 .exchange()
                 .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void shouldUpdateOwnCategory() {
+        UpdateCategoryDTO updateCategoryDTO = new UpdateCategoryDTO(
+                "Freelance",
+                TransactionType.INCOME,
+                "briefcase",
+                CategoryStatus.ACTIVE
+        );
+
+        restTestClient
+                .put()
+                .uri("/api/v1/categories/3")
+                .header(HttpHeaders.AUTHORIZATION, authToken)
+                .body(updateCategoryDTO)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(CategoryResponseDTO.class)
+                .value(response -> {
+                    assertThat(response.id()).isEqualTo(3L);
+                    assertThat(response.name()).isEqualTo("Freelance");
+                    assertThat(response.type()).isEqualTo(TransactionType.INCOME);
+                    assertThat(response.status()).isEqualTo(CategoryStatus.ACTIVE);
+                    assertThat(response.icon()).isEqualTo("briefcase");
+                });
+    }
+
+    @Test
+    void shouldArchiveCategoryOnDelete() {
+        restTestClient
+                .delete()
+                .uri("/api/v1/categories/3")
+                .header(HttpHeaders.AUTHORIZATION, authToken)
+                .exchange()
+                .expectStatus().isNoContent();
+
+        restTestClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/v1/categories")
+                        .queryParam("type", TransactionType.INCOME, TransactionType.EXPENSE)
+                        .queryParam("archived", true)
+                        .build())
+                .header(HttpHeaders.AUTHORIZATION, authToken)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(CategoryResponseDTO[].class)
+                .value(categories -> assertThat(categories)
+                        .anySatisfy(category -> {
+                            assertThat(category.id()).isEqualTo(3L);
+                            assertThat(category.status()).isEqualTo(CategoryStatus.ARCHIVED);
+                        }));
     }
 }

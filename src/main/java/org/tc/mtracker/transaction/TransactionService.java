@@ -38,7 +38,7 @@ public class TransactionService {
         Account account = resolveDefaultAccount(user);
 
         Transaction transaction = transactionMapper.toEntity(createRequestDTO, user);
-        Category category = getCategory(createRequestDTO);
+        Category category = getCategory(createRequestDTO, user);
 
         validateTransactionType(createRequestDTO, category);
 
@@ -64,8 +64,8 @@ public class TransactionService {
         return defaultAccount;
     }
 
-    private Category getCategory(TransactionCreateRequestDTO createRequestDTO) {
-        Category category = categoryService.findById(createRequestDTO.categoryId());
+    private Category getCategory(TransactionCreateRequestDTO createRequestDTO, User currentUser) {
+        Category category = categoryService.findAccessibleById(createRequestDTO.categoryId(), currentUser);
         if (!category.getStatus().equals(CategoryStatus.ACTIVE))
             throw new CategoryIsNotActiveException("Category is not active");
         return category;

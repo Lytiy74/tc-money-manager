@@ -26,4 +26,5 @@ VALUES (1, 'Salary', 'INCOME', 'ACTIVE', NULL, NOW(), NOW()),
 -- User-Specific Categories
 INSERT INTO categories (id, name, type, status, user_id, created_at, updated_at)
 VALUES (3, 'Side Project', 'INCOME', 'ACTIVE', 1, NOW(), NOW()), -- Owned by user@test.com
-       (4, 'Secret Hobby', 'EXPENSE', 'ACTIVE', 2, NOW(), NOW()); -- Owned by other@test.com
+       (4, 'Secret Hobby', 'EXPENSE', 'ACTIVE', 2, NOW(), NOW()), -- Owned by other@test.com
+       (5, 'Archived Food', 'EXPENSE', 'ARCHIVED', 1, NOW(), NOW()); -- Archived category of test user

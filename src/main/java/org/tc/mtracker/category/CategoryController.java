@@ -17,6 +17,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.tc.mtracker.category.dto.CategoryResponseDTO;
 import org.tc.mtracker.category.dto.CreateCategoryDTO;
+import org.tc.mtracker.category.dto.UpdateCategoryDTO;
 import org.tc.mtracker.common.enums.TransactionType;
 
 import java.util.List;
@@ -56,12 +57,20 @@ public class CategoryController  {
     })
     @GetMapping
     public ResponseEntity<List<CategoryResponseDTO>> getCategories(
-            @RequestParam("name") String name,
-            @RequestParam("type") List<TransactionType> type,
+            @RequestParam(value = "name", required = false) String name,
+            @RequestParam(value = "type", required = false) List<TransactionType> type,
+            @RequestParam(value = "archived", defaultValue = "false") boolean archived,
             @Parameter(hidden = true) Authentication auth
     ) {
+        return ResponseEntity.ok((categoryService.getCategories(name, type, archived, auth)));
+    }
 
-        return ResponseEntity.ok((categoryService.getCategories(name, type, auth)));
+    @GetMapping("/{categoryId}")
+    public ResponseEntity<CategoryResponseDTO> getCategoryById(
+            @PathVariable("categoryId") Long categoryId,
+            @Parameter(hidden = true) Authentication auth
+    ) {
+        return ResponseEntity.ok(categoryService.getCategoryById(categoryId, auth));
     }
 
     @Operation(
@@ -99,5 +108,23 @@ public class CategoryController  {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(categoryService.createCategory(dto, auth));
+    }
+
+    @PutMapping("/{categoryId}")
+    public ResponseEntity<CategoryResponseDTO> updateCategory(
+            @PathVariable("categoryId") Long categoryId,
+            @Valid @RequestBody UpdateCategoryDTO dto,
+            @Parameter(hidden = true) Authentication auth
+    ) {
+        return ResponseEntity.ok(categoryService.updateCategory(categoryId, dto, auth));
+    }
+
+    @DeleteMapping("/{categoryId}")
+    public ResponseEntity<Void> deleteCategory(
+            @PathVariable("categoryId") Long categoryId,
+            @Parameter(hidden = true) Authentication auth
+    ) {
+        categoryService.archiveCategory(categoryId, auth);
+        return ResponseEntity.noContent().build();
     }
 }

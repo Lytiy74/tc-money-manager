@@ -91,6 +91,12 @@ public class GlobalExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
     }
 
+    @ExceptionHandler(CategoryNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ProblemDetail handleCategoryNotFoundException(CategoryNotFoundException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
     @ExceptionHandler(UserNotActivatedException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ProblemDetail handleUserNotActivatedException(UserNotActivatedException ex) {

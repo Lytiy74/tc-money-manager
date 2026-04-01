@@ -173,7 +173,7 @@ class TransactionControllerTest {
     @Test
     @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
     @Sql(statements = "INSERT INTO categories (id, name, type, status, user_id, created_at, updated_at) " +
-            "VALUES (5, 'Archived Hobby', 'INCOME', 'ARCHIVED', 1, NOW(), NOW())")
+            "VALUES (6, 'Archived Hobby', 'INCOME', 'ARCHIVED', 1, NOW(), NOW())")
     void shouldReturn400WhenCategoryIsArchived() {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
         multipartBodyBuilder.part("dto", buildDtoWithInvalidCategory(), MediaType.APPLICATION_JSON);
@@ -202,7 +202,7 @@ class TransactionControllerTest {
         return new TransactionCreateRequestDTO(
                 BigDecimal.valueOf(1.0),
                 TransactionType.INCOME,
-                5L,
+                6L,
                 LocalDate.now(),
                 "Shop"
         );
