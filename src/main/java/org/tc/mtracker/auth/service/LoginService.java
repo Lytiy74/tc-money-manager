@@ -1,4 +1,4 @@
-package org.tc.mtracker.auth;
+package org.tc.mtracker.auth.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -6,6 +6,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.tc.mtracker.auth.dto.LoginRequestDto;
+import org.tc.mtracker.auth.model.RefreshToken;
 import org.tc.mtracker.security.CustomUserDetails;
 import org.tc.mtracker.security.JwtResponseDTO;
 import org.tc.mtracker.security.JwtService;

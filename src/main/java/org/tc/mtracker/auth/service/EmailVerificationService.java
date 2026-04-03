@@ -1,11 +1,13 @@
-package org.tc.mtracker.auth;
+package org.tc.mtracker.auth.service;
 
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.tc.mtracker.auth.dto.RequestUpdateUserEmailDTO;
+import org.tc.mtracker.auth.dto.UpdateEmailRequestDto;
+import org.tc.mtracker.auth.mail.AuthEmailService;
+import org.tc.mtracker.auth.model.RefreshToken;
 import org.tc.mtracker.security.CustomUserDetails;
 import org.tc.mtracker.security.JwtResponseDTO;
 import org.tc.mtracker.security.JwtService;
@@ -28,7 +30,7 @@ public class EmailVerificationService {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final UserRepository userRepository;
-    private final EmailService emailService;
+    private final AuthEmailService authEmailService;
 
     public JwtResponseDTO verifyToken(String token) {
         String purpose = jwtService.extractClaim(token, claims -> claims.get("purpose", String.class));
@@ -54,7 +56,7 @@ public class EmailVerificationService {
     }
 
     @Transactional
-    public void updateEmail(RequestUpdateUserEmailDTO dto, String currentUserEmail) {
+    public void updateEmail(UpdateEmailRequestDto dto, String currentUserEmail) {
         User user = findUserByEmail(currentUserEmail);
 
         if (userRepository.existsByEmail(dto.email())) {
@@ -69,7 +71,7 @@ public class EmailVerificationService {
 
         user.setVerificationToken(generatedToken);
 
-        emailService.sendVerificationEmail(dto.email(), generatedToken);
+        authEmailService.sendVerificationEmail(dto.email(), generatedToken);
 
         userRepository.save(user);
     }

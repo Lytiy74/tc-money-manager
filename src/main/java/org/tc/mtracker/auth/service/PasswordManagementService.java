@@ -1,4 +1,4 @@
-package org.tc.mtracker.auth;
+package org.tc.mtracker.auth.service;
 
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
@@ -7,8 +7,10 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.tc.mtracker.auth.dto.RequestUpdateUserPasswordDTO;
-import org.tc.mtracker.auth.dto.ResetPasswordDTO;
+import org.tc.mtracker.auth.dto.ResetPasswordRequestDto;
+import org.tc.mtracker.auth.dto.UpdatePasswordRequestDto;
+import org.tc.mtracker.auth.mail.AuthEmailService;
+import org.tc.mtracker.auth.model.RefreshToken;
 import org.tc.mtracker.security.CustomUserDetails;
 import org.tc.mtracker.security.JwtResponseDTO;
 import org.tc.mtracker.security.JwtService;
@@ -23,14 +25,14 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class PasswordService {
+public class PasswordManagementService {
     private static final String PASSWORD_RESET_PURPOSE = "password_reset";
 
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
     private final UserRepository userRepository;
     private final JwtService jwtService;
-    private final EmailService emailService;
+    private final AuthEmailService authEmailService;
 
     public void sendTokenToResetPassword(String email) {
         User user = userRepository.findByEmail(email).orElseThrow(
@@ -40,12 +42,12 @@ public class PasswordService {
         CustomUserDetails userDetails = new CustomUserDetails(user);
         String resetToken = jwtService.generateToken(Map.of("purpose", PASSWORD_RESET_PURPOSE), userDetails);
 
-        emailService.sendResetPassword(user.getEmail(), resetToken);
+        authEmailService.sendResetPassword(user.getEmail(), resetToken);
         log.info("Reset password token sent to user's email with id: {}", user.getId());
     }
 
     @Transactional
-    public JwtResponseDTO resetPassword(String token, ResetPasswordDTO dto) {
+    public JwtResponseDTO resetPassword(String token, ResetPasswordRequestDto dto) {
         if (!dto.password().equals(dto.confirmPassword())) {
             throw new UserResetPasswordException("Passwords do not match!");
         }
@@ -69,14 +71,14 @@ public class PasswordService {
         return new JwtResponseDTO(accessToken, refreshToken.getToken());
     }
 
-    public void updatePassword(RequestUpdateUserPasswordDTO dto, String currentUserEmail) {
+    public void updatePassword(UpdatePasswordRequestDto dto, String currentUserEmail) {
         User user = findUserByEmail(currentUserEmail);
 
         verifyCurrentPasswordWithUserInput(dto.currentPassword(), user.getPassword());
         verifyPasswordConfirmation(dto.newPassword(), dto.confirmNewPassword());
         user.setPassword(passwordEncoder.encode(dto.newPassword()));
         userRepository.save(user);
-        emailService.sendPasswordChangedNotification(user.getEmail());
+        authEmailService.sendPasswordChangedNotification(user.getEmail());
         log.info("Password for user with id {} is updated successfully!", user.getId());
     }
 

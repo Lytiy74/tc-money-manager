@@ -13,9 +13,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.web.multipart.MultipartFile;
-import org.tc.mtracker.auth.EmailService;
-import org.tc.mtracker.auth.dto.RequestUpdateUserEmailDTO;
-import org.tc.mtracker.auth.dto.RequestUpdateUserPasswordDTO;
+import org.tc.mtracker.auth.dto.UpdateEmailRequestDto;
+import org.tc.mtracker.auth.dto.UpdatePasswordRequestDto;
+import org.tc.mtracker.auth.mail.AuthEmailService;
 import org.tc.mtracker.currency.CurrencyCode;
 import org.tc.mtracker.user.dto.RequestUpdateUserProfileDTO;
 import org.tc.mtracker.utils.S3Service;
@@ -61,7 +61,7 @@ class UserControllerTest {
     private UserService userService;
 
     @MockitoBean
-    private EmailService emailService;
+    private AuthEmailService authEmailService;
 
     @Test
     @Sql("/datasets/test_users.sql")
@@ -206,7 +206,7 @@ class UserControllerTest {
     @Test
     @Sql("/datasets/test_users.sql")
     void shouldReturn200WhenEmailUpdateFlowTriggered() {
-        RequestUpdateUserEmailDTO requestUpdateUserEmailDTO = new RequestUpdateUserEmailDTO("newemail@example.com");
+        UpdateEmailRequestDto requestUpdateUserEmailDTO = new UpdateEmailRequestDto("newemail@example.com");
         String token = testHelpers.generateTestToken("test@gmail.com", "access_token", 3600000);
         restTestClient
                 .post()
@@ -217,13 +217,13 @@ class UserControllerTest {
                 .expectStatus().isOk()
                 .expectBody();
 
-        verify(emailService).sendVerificationEmail(eq("newemail@example.com"), anyString());
+        verify(authEmailService).sendVerificationEmail(eq("newemail@example.com"), anyString());
     }
 
     @Test
     @Sql("/datasets/test_users.sql")
     void shouldVerifyEmailUpdateSuccessfully() {
-        RequestUpdateUserEmailDTO requestUpdateUserEmailDTO = new RequestUpdateUserEmailDTO("newemail@example.com");
+        UpdateEmailRequestDto requestUpdateUserEmailDTO = new UpdateEmailRequestDto("newemail@example.com");
         String accessToken = testHelpers.generateTestToken("test@gmail.com", "access_token", 3600000);
 
         restTestClient
@@ -254,7 +254,7 @@ class UserControllerTest {
     @Test
     @Sql("/datasets/test_users.sql")
     void shouldReturn401IfWrongVerificationTokenIsProvided() {
-        RequestUpdateUserEmailDTO requestUpdateUserEmailDTO = new RequestUpdateUserEmailDTO("newemail@example.com");
+        UpdateEmailRequestDto requestUpdateUserEmailDTO = new UpdateEmailRequestDto("newemail@example.com");
         String accessToken = testHelpers.generateTestToken("test@gmail.com", "access_token", 3600000);
 
         restTestClient
@@ -279,7 +279,7 @@ class UserControllerTest {
     @Test
     @Sql("/datasets/test_users.sql")
     void shouldReturn401WhenVerificationTokenHasWrongPurpose() {
-        RequestUpdateUserEmailDTO requestUpdateUserEmailDTO = new RequestUpdateUserEmailDTO("newemail@example.com");
+        UpdateEmailRequestDto requestUpdateUserEmailDTO = new UpdateEmailRequestDto("newemail@example.com");
         String accessToken = testHelpers.generateTestToken("test@gmail.com", "access_token", 3600000);
 
         restTestClient
@@ -305,7 +305,7 @@ class UserControllerTest {
     @Test
     @Sql("/datasets/test_users.sql")
     void shouldReturn401WhenVerificationTokenIsExpired() {
-        RequestUpdateUserEmailDTO requestUpdateUserEmailDTO = new RequestUpdateUserEmailDTO("newemail@example.com");
+        UpdateEmailRequestDto requestUpdateUserEmailDTO = new UpdateEmailRequestDto("newemail@example.com");
         String accessToken = testHelpers.generateTestToken("test@gmail.com", "access_token", 3600000);
 
         restTestClient
@@ -331,7 +331,7 @@ class UserControllerTest {
     @Test
     @Sql("/datasets/test_users.sql")
     void shouldReturn401WhenNewEmailIsUsed() {
-        RequestUpdateUserEmailDTO requestUpdateUserEmailDTO = new RequestUpdateUserEmailDTO("admin@mtracker.com");
+        UpdateEmailRequestDto requestUpdateUserEmailDTO = new UpdateEmailRequestDto("admin@mtracker.com");
         String accessToken = testHelpers.generateTestToken("test@gmail.com", "email_update_verification", 3600000);
 
         restTestClient
@@ -341,7 +341,7 @@ class UserControllerTest {
                 .body(requestUpdateUserEmailDTO)
                 .exchange()
                 .expectStatus().is4xxClientError();
-        verifyNoInteractions(emailService);
+        verifyNoInteractions(authEmailService);
     }
 
     @Test
@@ -376,7 +376,7 @@ class UserControllerTest {
     @Sql("/datasets/test_users.sql")
     void shouldReturn200WhenPasswordUpdated() {
         String accessToken = testHelpers.generateTestToken("test@gmail.com", "access_token", 3600000);
-        RequestUpdateUserPasswordDTO dto = new RequestUpdateUserPasswordDTO("12345678", "newPassword", "newPassword");
+        UpdatePasswordRequestDto dto = new UpdatePasswordRequestDto("12345678", "newPassword", "newPassword");
 
         restTestClient
                 .put()
@@ -391,7 +391,7 @@ class UserControllerTest {
     @Sql("/datasets/test_users.sql")
     void shouldReturn400WhenCurrentPasswordIsInvalid() {
         String accessToken = testHelpers.generateTestToken("test@gmail.com", "access_token", 3600000);
-        RequestUpdateUserPasswordDTO dto = new RequestUpdateUserPasswordDTO("87654321", "newPassword", "newPassword");
+        UpdatePasswordRequestDto dto = new UpdatePasswordRequestDto("87654321", "newPassword", "newPassword");
 
         restTestClient
                 .put()
@@ -406,7 +406,7 @@ class UserControllerTest {
     @Sql("/datasets/test_users.sql")
     void shouldReturn400WhenPasswordIsShort() {
         String accessToken = testHelpers.generateTestToken("test@gmail.com", "access_token", 3600000);
-        RequestUpdateUserPasswordDTO dto = new RequestUpdateUserPasswordDTO("87654321", "new", "new");
+        UpdatePasswordRequestDto dto = new UpdatePasswordRequestDto("87654321", "new", "new");
 
         restTestClient
                 .put()

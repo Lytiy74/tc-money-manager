@@ -6,7 +6,7 @@ import org.tc.mtracker.currency.CurrencyCode;
 import java.time.LocalDateTime;
 
 @Schema(description = "User sign up response")
-public record AuthResponseDTO(
+public record RegistrationResponseDto(
         @Schema(description = "User's id", example = "123123")
         Long id,
 

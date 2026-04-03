@@ -1,4 +1,4 @@
-package org.tc.mtracker.auth;
+package org.tc.mtracker.auth.api;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -18,14 +18,14 @@ import org.tc.mtracker.auth.dto.*;
 import org.tc.mtracker.common.image.ValidImage;
 import org.tc.mtracker.security.JwtResponseDTO;
 
-public interface AuthApi {
+public interface AuthenticationApi {
     @Operation(summary = "Sign up a new user",
             description = "Creates a new user and sends email verification link. Account not activated until verified")
     @ApiResponse(
             responseCode = "201",
             description = "User created successfully",
             content = {@Content(mediaType = "application/json",
-                    schema = @Schema(implementation = AuthResponseDTO.class))
+                    schema = @Schema(implementation = RegistrationResponseDto.class))
             }
     )
     @ApiResponse(
@@ -43,16 +43,16 @@ public interface AuthApi {
             }
     )
     @PostMapping(value = "/sign-up", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    ResponseEntity<AuthResponseDTO> signUp(
+    ResponseEntity<RegistrationResponseDto> signUp(
             @Parameter(
                     name = "User dto",
                     required = true,
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = AuthRequestDTO.class))
+                            schema = @Schema(implementation = RegistrationRequestDto.class))
             )
             @Valid
-            @RequestPart(name = "dto") AuthRequestDTO authRequestDTO,
+            @RequestPart(name = "dto") RegistrationRequestDto registrationRequestDto,
 
             @Parameter(
                     name = "Avatar",
@@ -171,7 +171,7 @@ public interface AuthApi {
     @PostMapping("/reset-password/confirm")
     ResponseEntity<JwtResponseDTO> resetPassword(
             @RequestParam("token") String token,
-            @Valid @RequestBody ResetPasswordDTO resetPasswordDTO
+            @Valid @RequestBody ResetPasswordRequestDto resetPasswordRequestDto
     );
 
     @Operation(
@@ -230,12 +230,12 @@ public interface AuthApi {
                     description = "Refresh token payload",
                     required = true,
                     content = @Content(
-                            schema = @Schema(implementation = RefreshTokenRequest.class),
+                            schema = @Schema(implementation = RefreshTokenRequestDto.class),
                             examples = @ExampleObject(
                                     name = "Sample refresh request",
                                     value = "{ \"refreshToken\": \"jwt-refresh-token\" }"
                             )
                     )
             )
-            @Valid @RequestBody RefreshTokenRequest request);
+            @Valid @RequestBody RefreshTokenRequestDto request);
 }

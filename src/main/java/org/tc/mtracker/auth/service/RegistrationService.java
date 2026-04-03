@@ -1,4 +1,4 @@
-package org.tc.mtracker.auth;
+package org.tc.mtracker.auth.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,9 +8,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.tc.mtracker.account.DefaultAccountProvisioningService;
-import org.tc.mtracker.auth.dto.AuthMapper;
-import org.tc.mtracker.auth.dto.AuthRequestDTO;
-import org.tc.mtracker.auth.dto.AuthResponseDTO;
+import org.tc.mtracker.auth.dto.RegistrationRequestDto;
+import org.tc.mtracker.auth.dto.RegistrationResponseDto;
+import org.tc.mtracker.auth.mail.AuthEmailService;
+import org.tc.mtracker.auth.mapper.RegistrationMapper;
 import org.tc.mtracker.security.CustomUserDetails;
 import org.tc.mtracker.security.JwtService;
 import org.tc.mtracker.user.User;
@@ -29,15 +30,15 @@ public class RegistrationService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final AuthMapper authMapper;
+    private final RegistrationMapper registrationMapper;
     private final DefaultAccountProvisioningService defaultAccountProvisioningService;
-    private final EmailService emailService;
+    private final AuthEmailService authEmailService;
     private final S3Service imageService;
     private final JwtService jwtService;
 
 
     @Transactional
-    public AuthResponseDTO signUp(AuthRequestDTO dto, MultipartFile avatar) {
+    public RegistrationResponseDto signUp(RegistrationRequestDto dto, MultipartFile avatar) {
         if (userRepository.existsByEmail(dto.email())) {
             throw new UserAlreadyExistsException("User with this email already exists");
         }
@@ -61,9 +62,9 @@ public class RegistrationService {
                 new CustomUserDetails(savedUser)
         );
 
-        emailService.sendVerificationEmail(savedUser.getEmail(), verificationToken);
+        authEmailService.sendVerificationEmail(savedUser.getEmail(), verificationToken);
         log.info("User with id {} is registered successfully.", savedUser.getId());
-        return authMapper.toAuthResponseDTO(savedUser, avatarUrl);
+        return registrationMapper.toRegistrationResponseDto(savedUser, avatarUrl);
     }
 
     private @Nullable String uploadAvatar(String imageKey, MultipartFile avatar) {

@@ -9,7 +9,7 @@ import org.hibernate.validator.constraints.Length;
 import org.tc.mtracker.currency.CurrencyCode;
 
 @Schema(description = "User sign up request")
-public record AuthRequestDTO(
+public record RegistrationRequestDto(
         @Schema(description = "User's email address", example = "example@mail.com")
         @NotBlank @Email String email,
 

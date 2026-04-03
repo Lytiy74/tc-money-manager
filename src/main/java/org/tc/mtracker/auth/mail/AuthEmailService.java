@@ -1,4 +1,4 @@
-package org.tc.mtracker.auth;
+package org.tc.mtracker.auth.mail;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class EmailService {
+public class AuthEmailService {
 
     private static final String EMAIL_VERIFICATION_SUBJECT = "Email Verification";
     private static final String PASSWORD_RESET_SUBJECT = "Reset Password";

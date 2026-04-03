@@ -1,9 +1,10 @@
-package org.tc.mtracker.auth;
+package org.tc.mtracker.auth.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.tc.mtracker.auth.dto.RefreshTokenRequest;
+import org.tc.mtracker.auth.dto.RefreshTokenRequestDto;
+import org.tc.mtracker.auth.model.RefreshToken;
 import org.tc.mtracker.security.CustomUserDetails;
 import org.tc.mtracker.security.JwtResponseDTO;
 import org.tc.mtracker.security.JwtService;
@@ -16,7 +17,7 @@ public class TokenRefreshService {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
 
-    public JwtResponseDTO refreshToken(RefreshTokenRequest request) {
+    public JwtResponseDTO refreshToken(RefreshTokenRequestDto request) {
         return refreshTokenService.findByToken(request.refreshToken())
                 .map(refreshTokenService::verifyExpiration)
                 .map(RefreshToken::getUser)

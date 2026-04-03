@@ -18,10 +18,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.web.multipart.MultipartFile;
-import org.tc.mtracker.auth.dto.AuthRequestDTO;
 import org.tc.mtracker.auth.dto.LoginRequestDto;
-import org.tc.mtracker.auth.dto.RefreshTokenRequest;
-import org.tc.mtracker.auth.dto.ResetPasswordDTO;
+import org.tc.mtracker.auth.dto.RefreshTokenRequestDto;
+import org.tc.mtracker.auth.dto.RegistrationRequestDto;
+import org.tc.mtracker.auth.dto.ResetPasswordRequestDto;
+import org.tc.mtracker.auth.mail.AuthEmailService;
 import org.tc.mtracker.currency.CurrencyCode;
 import org.tc.mtracker.security.JwtResponseDTO;
 import org.tc.mtracker.utils.S3Service;
@@ -57,7 +58,7 @@ class AuthControllerTest {
     static MySQLContainer<?> mySQLContainer = new MySQLContainer<>("mysql:8.3.0");
 
     @MockitoBean
-    private EmailService emailService;
+    private AuthEmailService authEmailService;
 
     @MockitoBean
     private S3Service s3Service;
@@ -71,7 +72,7 @@ class AuthControllerTest {
     @Test
     void shouldReturn201AndAuthResponseDtoIfUserIsSignedUpSuccessfullyWithoutAvatar() {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+        multipartBodyBuilder.part("dto", new RegistrationRequestDto(
                 "new1-user@gmail.com",
                 "validStrongPassword!1",
                 "NewOne User",
@@ -94,14 +95,14 @@ class AuthControllerTest {
                 .jsonPath("$.createdAt").isNotEmpty();
 
         verifyNoInteractions(s3Service);
-        verify(emailService, times(1)).sendVerificationEmail(eq("new1-user@gmail.com"), anyString());
-        verifyNoMoreInteractions(emailService);
+        verify(authEmailService, times(1)).sendVerificationEmail(eq("new1-user@gmail.com"), anyString());
+        verifyNoMoreInteractions(authEmailService);
     }
 
     @Test
     void shouldReturn201WithCyrillicFullName() {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+        multipartBodyBuilder.part("dto", new RegistrationRequestDto(
                 "new1-user@gmail.com",
                 "validStrongPassword!1",
                 "Батько Батькович",
@@ -121,7 +122,7 @@ class AuthControllerTest {
         when(s3Service.generatePresignedUrl(any(String.class))).thenReturn("test-avatar-url");
 
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+        multipartBodyBuilder.part("dto", new RegistrationRequestDto(
                 "new-user@gmail.com",
                 "newValidPassword!123",
                 "New User",
@@ -156,8 +157,8 @@ class AuthControllerTest {
 
         verify(s3Service, times(1)).saveFile(keyCaptor.capture(), any(MultipartFile.class));
         verify(s3Service, times(1)).generatePresignedUrl(keyCaptor.getValue());
-        verify(emailService, times(1)).sendVerificationEmail(eq("new-user@gmail.com"), anyString());
-        verifyNoMoreInteractions(s3Service, emailService);
+        verify(authEmailService, times(1)).sendVerificationEmail(eq("new-user@gmail.com"), anyString());
+        verifyNoMoreInteractions(s3Service, authEmailService);
     }
 
     @Test
@@ -181,13 +182,13 @@ class AuthControllerTest {
                 .expectStatus().isBadRequest()
                 .expectBody();
 
-        verifyNoInteractions(s3Service, emailService);
+        verifyNoInteractions(s3Service, authEmailService);
     }
 
     @Test
     void shouldReturn400IfAvatarHasUnsupportedContentTypeOnSignUp() {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+        multipartBodyBuilder.part("dto", new RegistrationRequestDto(
                 "new-user3@gmail.com",
                 "12345678",
                 "New User",
@@ -211,13 +212,13 @@ class AuthControllerTest {
                 .expectStatus().isBadRequest()
                 .expectBody();
 
-        verifyNoInteractions(s3Service, emailService);
+        verifyNoInteractions(s3Service, authEmailService);
     }
 
     @Test
     void shouldReturn400IfFullNameIsShorterThanBoundOfLength() {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+        multipartBodyBuilder.part("dto", new RegistrationRequestDto(
                 "Test7@gmail.com",
                 "ABc123456!",
                 "Aa",
@@ -235,7 +236,7 @@ class AuthControllerTest {
     @Test
     void shouldReturn400IfFullNameIsLongerThanBoundOfLength() {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+        multipartBodyBuilder.part("dto", new RegistrationRequestDto(
                 "Test7@gmail.com",
                 "ABc123456!",
                 "qweqweqweqewqweqweqweqweqweqweqweqweqweqweqweqeqeqwewqeqweqweqweqe",
@@ -253,7 +254,7 @@ class AuthControllerTest {
     @Test
     void shouldReturn400IfFullNameIsNotContainsLatinOrCyrilicSymbols() {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+        multipartBodyBuilder.part("dto", new RegistrationRequestDto(
                 "Test7@gmail.com",
                 "ABc123456!",
                 "1234567890",
@@ -272,7 +273,7 @@ class AuthControllerTest {
     @Test
     void shouldReturn400IfPasswordFieldIsEmptyOnSignUp() {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+        multipartBodyBuilder.part("dto", new RegistrationRequestDto(
                 "test@test.com",
                 "",
                 "Test User",
@@ -290,7 +291,7 @@ class AuthControllerTest {
     @Test
     void shouldReturn400IsLessThen8CharactersOnSignUp() {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+        multipartBodyBuilder.part("dto", new RegistrationRequestDto(
                 "test@test.com",
                 "Pass12!",
                 "Test User",
@@ -308,7 +309,7 @@ class AuthControllerTest {
     @Test
     void shouldReturn400IsMoreThen72CharactersOnSignUp() {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+        multipartBodyBuilder.part("dto", new RegistrationRequestDto(
                 "test@test.com",
                 "Pass12!",
                 "Test User",
@@ -326,7 +327,7 @@ class AuthControllerTest {
     @Test
     void shouldReturn201WhenPasswordLength72CharactersOnSignUp() {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+        multipartBodyBuilder.part("dto", new RegistrationRequestDto(
                 "test@test.com",
                 "3XqgtwJeRa76TbRKxApPaXeahvr4eVUKHPe7Sm2ai0R7dxXxPhb0GRFnXf5PL2!fjaQ3Uf9U",
                 "Test User",
@@ -344,7 +345,7 @@ class AuthControllerTest {
     @Test
     void shouldReturn400IsNotContainsUppercaseOnSignUp() {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+        multipartBodyBuilder.part("dto", new RegistrationRequestDto(
                 "test@test.com",
                 "validpassword1!",
                 "Test User",
@@ -362,7 +363,7 @@ class AuthControllerTest {
     @Test
     void shouldReturn400IsNotContainsLowercaseOnSignUp() {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+        multipartBodyBuilder.part("dto", new RegistrationRequestDto(
                 "test@test.com",
                 "VALIDPASSWORD1!",
                 "Test User",
@@ -380,7 +381,7 @@ class AuthControllerTest {
     @Test
     void shouldReturn400IsNotContainsSpecialCharatersOnSignUp() {
         MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-        multipartBodyBuilder.part("dto", new AuthRequestDTO(
+        multipartBodyBuilder.part("dto", new RegistrationRequestDto(
                 "test@test.com",
                 "SuperStrong1",
                 "Test User",
@@ -498,7 +499,7 @@ class AuthControllerTest {
     @Test
     void shouldReturn404WhenResetTokenReferencesMissingUser() {
         String validToken = generateTestToken("deleted-user@gmail.com", "password_reset", 60000);
-        ResetPasswordDTO resetDto = new ResetPasswordDTO("newPassword123", "newPassword123");
+        ResetPasswordRequestDto resetDto = new ResetPasswordRequestDto("newPassword123", "newPassword123");
 
         restTestClient
                 .post()
@@ -534,7 +535,7 @@ class AuthControllerTest {
     void shouldResetPasswordSuccessfullyWithValidToken() {
         String validToken = generateTestToken("test@gmail.com", "password_reset", 60000);
 
-        ResetPasswordDTO resetDto = new ResetPasswordDTO("newPassword123", "newPassword123");
+        ResetPasswordRequestDto resetDto = new ResetPasswordRequestDto("newPassword123", "newPassword123");
 
         restTestClient
                 .post()
@@ -553,7 +554,7 @@ class AuthControllerTest {
     @Sql("/datasets/test_users.sql")
     void shouldReturn400WhenPasswordsDoNotMatch() {
         String validToken = generateTestToken("test@gmail.com", "password_reset", 60000);
-        ResetPasswordDTO mismatchDto = new ResetPasswordDTO("newPassword123", "differentPassword");
+        ResetPasswordRequestDto mismatchDto = new ResetPasswordRequestDto("newPassword123", "differentPassword");
 
         restTestClient
                 .post()
@@ -570,7 +571,7 @@ class AuthControllerTest {
     @Sql("/datasets/test_users.sql")
     void shouldReturn401WhenTokenIsExpired() {
         String expiredToken = generateTestToken("test@gmail.com", "password_reset", -3600000);
-        ResetPasswordDTO resetDto = new ResetPasswordDTO("newPassword123", "newPassword123");
+        ResetPasswordRequestDto resetDto = new ResetPasswordRequestDto("newPassword123", "newPassword123");
 
         restTestClient
                 .post()
@@ -587,7 +588,7 @@ class AuthControllerTest {
     @Sql("/datasets/test_users.sql")
     void shouldReturn401WhenTokenPurposeIsWrong() {
         String wrongPurposeToken = generateTestToken("test@gmail.com", "email_verification", 60000);
-        ResetPasswordDTO resetDto = new ResetPasswordDTO("newPassword123", "newPassword123");
+        ResetPasswordRequestDto resetDto = new ResetPasswordRequestDto("newPassword123", "newPassword123");
 
         restTestClient
                 .post()
@@ -638,7 +639,7 @@ class AuthControllerTest {
         // Wait 1 second to ensure the JWT 'iat' claim changes
         Thread.sleep(1000);
 
-        RefreshTokenRequest refreshRequest = new RefreshTokenRequest(refreshToken);
+        RefreshTokenRequestDto refreshRequest = new RefreshTokenRequestDto(refreshToken);
 
         restTestClient
                 .post()
@@ -657,7 +658,7 @@ class AuthControllerTest {
 
     @Test
     void shouldReturn401WhenRefreshTokenIsInvalid() {
-        RefreshTokenRequest invalidRequest = new RefreshTokenRequest("invalid-uuid-token");
+        RefreshTokenRequestDto invalidRequest = new RefreshTokenRequestDto("invalid-uuid-token");
 
         restTestClient
                 .post()

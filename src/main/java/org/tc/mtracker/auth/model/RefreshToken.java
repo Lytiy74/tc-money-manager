@@ -1,4 +1,4 @@
-package org.tc.mtracker.auth;
+package org.tc.mtracker.auth.model;
 
 import jakarta.persistence.*;
 import lombok.*;

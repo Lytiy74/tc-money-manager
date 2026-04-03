@@ -1,4 +1,4 @@
-package org.tc.mtracker.auth;
+package org.tc.mtracker.auth.api;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -13,8 +13,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.tc.mtracker.auth.dto.RequestUpdateUserEmailDTO;
-import org.tc.mtracker.auth.dto.RequestUpdateUserPasswordDTO;
+import org.tc.mtracker.auth.dto.UpdateEmailRequestDto;
+import org.tc.mtracker.auth.dto.UpdatePasswordRequestDto;
+import org.tc.mtracker.auth.service.EmailVerificationService;
+import org.tc.mtracker.auth.service.PasswordManagementService;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -24,11 +26,11 @@ import org.tc.mtracker.auth.dto.RequestUpdateUserPasswordDTO;
 public class UserIdentityController {
 
     private final EmailVerificationService emailVerificationService;
-    private final PasswordService passwordService;
+    private final PasswordManagementService passwordManagementService;
 
     @PostMapping("/me/update-email")
     public ResponseEntity<Void> updateEmail(
-            @RequestBody RequestUpdateUserEmailDTO dto,
+            @RequestBody UpdateEmailRequestDto dto,
             Authentication auth
     ) {
         emailVerificationService.updateEmail(dto, auth.getName());
@@ -59,10 +61,10 @@ public class UserIdentityController {
     )
     @PutMapping("/me/update-password")
     public ResponseEntity<Void> updatePassword(
-            @RequestBody @Valid RequestUpdateUserPasswordDTO dto,
+            @RequestBody @Valid UpdatePasswordRequestDto dto,
             Authentication auth
     ) {
-        passwordService.updatePassword(dto, auth.getName());
+        passwordManagementService.updatePassword(dto, auth.getName());
         return ResponseEntity.ok().build();
     }
 
