@@ -16,6 +16,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.tc.mtracker.auth.EmailVerificationService;
+import org.tc.mtracker.auth.PasswordService;
 import org.tc.mtracker.common.image.ValidImage;
 import org.tc.mtracker.user.dto.RequestUpdateUserEmailDTO;
 import org.tc.mtracker.user.dto.RequestUpdateUserPasswordDTO;
@@ -30,6 +32,8 @@ import org.tc.mtracker.user.dto.ResponseUserDTO;
 public class UserController {
 
     private final UserService userService;
+    private final EmailVerificationService emailVerificationService;
+    private final PasswordService passwordService;
 
     @Operation(summary = "Update user's profile",
             description = "Updates the user's data by new one.")
@@ -77,16 +81,16 @@ public class UserController {
             @RequestParam(name = "avatar", required = false) MultipartFile avatar,
             @Parameter(hidden = true) Authentication auth
     ) {
-        ResponseUserDTO responseUserProfileDTO = userService.updateProfile(dto, avatar, auth);
+        ResponseUserDTO responseUserProfileDTO = userService.updateProfile(dto, avatar, auth.getName());
         return ResponseEntity.ok()
                 .body(responseUserProfileDTO);
     }
 
     @PostMapping(value = "/me/update-email")
-    public ResponseEntity<ResponseUserDTO> updateEmail(
+    public ResponseEntity<Void> updateEmail(
             @RequestBody RequestUpdateUserEmailDTO dto,
             @Parameter(hidden = true) Authentication auth) {
-        userService.updateEmail(dto, auth);
+        emailVerificationService.updateEmail(dto, auth.getName());
         return ResponseEntity.ok().build();
     }
 
@@ -116,13 +120,13 @@ public class UserController {
     public ResponseEntity<Void> updatePassword(
             @RequestBody @Valid RequestUpdateUserPasswordDTO dto,
             @Parameter(hidden = true) Authentication auth) {
-        userService.updatePassword(dto, auth);
+        passwordService.updatePassword(dto, auth.getName());
         return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/verify-email")
     public ResponseEntity<Void> verifyEmail(@RequestParam String token) {
-        userService.verifyEmailUpdate(token);
+        emailVerificationService.verifyEmailUpdate(token);
         return ResponseEntity.ok().build();
     }
 
@@ -143,6 +147,6 @@ public class UserController {
                     examples = @ExampleObject(value = "Internal error: NullPointerException")))
     @GetMapping("/me")
     public ResponseEntity<ResponseUserDTO> getUserProfile(Authentication auth) {
-        return ResponseEntity.ok(userService.getUser(auth));
+        return ResponseEntity.ok(userService.getUser(auth.getName()));
     }
 }

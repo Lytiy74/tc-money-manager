@@ -20,7 +20,7 @@ public class AuthController implements AuthApi {
 
     private final RegistrationService registrationService;
     private final LoginService loginService;
-    private final ResetPasswordService resetPasswordService;
+    private final PasswordService passwordService;
     private final EmailVerificationService emailVerificationService;
     private final TokenRefreshService tokenRefreshService;
 
@@ -40,13 +40,13 @@ public class AuthController implements AuthApi {
 
     @Override
     public ResponseEntity<String> sendResetPasswordToken(String email) {
-        resetPasswordService.sendTokenToResetPassword(email);
+        passwordService.sendTokenToResetPassword(email);
         return ResponseEntity.ok("Your link to reset password was sent!");
     }
 
     @Override
     public ResponseEntity<JwtResponseDTO> resetPassword(String token, ResetPasswordDTO resetPasswordDTO) {
-        JwtResponseDTO response = resetPasswordService.resetPassword(token, resetPasswordDTO);
+        JwtResponseDTO response = passwordService.resetPassword(token, resetPasswordDTO);
         return ResponseEntity.ok(response);
     }
 

@@ -94,7 +94,7 @@ class AuthControllerTest {
                 .jsonPath("$.createdAt").isNotEmpty();
 
         verifyNoInteractions(s3Service);
-        verify(emailService, times(1)).sendVerificationEmail(any());
+        verify(emailService, times(1)).sendVerificationEmail(eq("new1-user@gmail.com"), anyString());
         verifyNoMoreInteractions(emailService);
     }
 
@@ -156,7 +156,7 @@ class AuthControllerTest {
 
         verify(s3Service, times(1)).saveFile(keyCaptor.capture(), any(MultipartFile.class));
         verify(s3Service, times(1)).generatePresignedUrl(keyCaptor.getValue());
-        verify(emailService, times(1)).sendVerificationEmail(any());
+        verify(emailService, times(1)).sendVerificationEmail(eq("new-user@gmail.com"), anyString());
         verifyNoMoreInteractions(s3Service, emailService);
     }
 

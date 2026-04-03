@@ -137,7 +137,7 @@ public interface AuthApi {
                     schema = @Schema(implementation = ProblemDetail.class)
             )
     )
-    @PostMapping({"/reset-token"})
+    @PostMapping({"/reset-token", "/getTokenToResetPassword"})
     ResponseEntity<String> sendResetPasswordToken(
             @RequestParam("email") @Email String email
     );
