@@ -29,10 +29,11 @@ import org.tc.mtracker.security.JwtResponseDTO;
 @Validated
 public class AuthController {
 
-    private final AuthService authService;
     private final RegistrationService registrationService;
     private final LoginService loginService;
     private final ResetPasswordService resetPasswordService;
+    private final EmailVerificationService emailVerificationService;
+    private final TokenRefreshService tokenRefreshService;
 
     @Operation(summary = "Sign up a new user",
             description = "Creates a new user and sends email verification link. Account not activated until verified")
@@ -141,12 +142,6 @@ public class AuthController {
                 .body(jwt);
     }
 
-    /**
-     * Sends to user's email a link with token to be able to reset user's password
-     *
-     * @param email requested email for resetting password
-     * @return Http status code and message
-     */
     @Operation(
             summary = "Send reset password email",
             description = "Generates a reset link and sends it to the user's email."
@@ -174,13 +169,6 @@ public class AuthController {
         return ResponseEntity.ok("Your link to reset password was sent!");
     }
 
-    /**
-     * Resets user's password
-     *
-     * @param token            token from email link
-     * @param resetPasswordDTO new user's password and confirm password
-     * @return access token to login in good case
-     */
     @Operation(
             summary = "Reset password using token",
             description = "Updates the user password if the token is valid."
@@ -254,13 +242,10 @@ public class AuthController {
                     schema = @Schema(type = "string")
             )
             @RequestParam String token) {
-        JwtResponseDTO jwt = authService.verifyToken(token);
+        JwtResponseDTO jwt = emailVerificationService.verifyToken(token);
         return ResponseEntity.ok().body(jwt);
     }
 
-    /**
-     * Refresh authentication token using refresh token
-     */
     @Operation(
             summary = "Refresh token",
             description = "Generates a new access token using a valid refresh token"
@@ -286,7 +271,7 @@ public class AuthController {
                     )
             )
             @Valid @RequestBody RefreshTokenRequest request) {
-        JwtResponseDTO jwt = authService.refreshToken(request);
+        JwtResponseDTO jwt = tokenRefreshService.refreshToken(request);
         return ResponseEntity.ok(jwt);
     }
 }
