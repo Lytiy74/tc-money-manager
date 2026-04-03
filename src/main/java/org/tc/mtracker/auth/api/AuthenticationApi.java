@@ -1,4 +1,4 @@
-package org.tc.mtracker.auth;
+package org.tc.mtracker.auth.api;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -7,37 +7,25 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.tc.mtracker.auth.dto.*;
 import org.tc.mtracker.common.image.ValidImage;
 import org.tc.mtracker.security.JwtResponseDTO;
 
-@RestController
-@RequestMapping(value = "/api/v1/auth")
-@RequiredArgsConstructor
-@Tag(name = "Authentication", description = "Authentication and email verification endpoints")
-@Validated
-public class AuthController {
-
-    private final AuthService authService;
-
+public interface AuthenticationApi {
     @Operation(summary = "Sign up a new user",
             description = "Creates a new user and sends email verification link. Account not activated until verified")
     @ApiResponse(
             responseCode = "201",
             description = "User created successfully",
             content = {@Content(mediaType = "application/json",
-                    schema = @Schema(implementation = AuthResponseDTO.class))
+                    schema = @Schema(implementation = RegistrationResponseDto.class))
             }
     )
     @ApiResponse(
@@ -55,16 +43,16 @@ public class AuthController {
             }
     )
     @PostMapping(value = "/sign-up", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<AuthResponseDTO> signUp(
+    ResponseEntity<RegistrationResponseDto> signUp(
             @Parameter(
                     name = "User dto",
                     required = true,
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = AuthRequestDTO.class))
+                            schema = @Schema(implementation = RegistrationRequestDto.class))
             )
             @Valid
-            @RequestPart(name = "dto") AuthRequestDTO authRequestDTO,
+            @RequestPart(name = "dto") RegistrationRequestDto registrationRequestDto,
 
             @Parameter(
                     name = "Avatar",
@@ -78,10 +66,7 @@ public class AuthController {
             @ValidImage
             @RequestPart(name = "avatar", required = false) MultipartFile avatar
 
-    ) {
-        AuthResponseDTO authResponseDTO = authService.signUp(authRequestDTO, avatar);
-        return ResponseEntity.status(HttpStatus.CREATED).body(authResponseDTO);
-    }
+    );
 
     @Operation(
             summary = "Login user",
@@ -123,7 +108,7 @@ public class AuthController {
             }
     )
     @PostMapping("/login")
-    public ResponseEntity<JwtResponseDTO> login(
+    ResponseEntity<JwtResponseDTO> login(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "User login details",
                     required = true,
@@ -131,19 +116,8 @@ public class AuthController {
                             schema = @Schema(implementation = LoginRequestDto.class))
             )
             @Valid @RequestBody LoginRequestDto loginRequestDto
-    ) {
-        JwtResponseDTO jwt = authService.login(loginRequestDto);
-        return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(jwt);
-    }
+    );
 
-    /**
-     * Sends to user's email a link with token to be able to reset user's password
-     *
-     * @param email requested email for resetting password
-     * @return Http status code and message
-     */
     @Operation(
             summary = "Send reset password email",
             description = "Generates a reset link and sends it to the user's email."
@@ -163,21 +137,11 @@ public class AuthController {
                     schema = @Schema(implementation = ProblemDetail.class)
             )
     )
-    @PostMapping("/getTokenToResetPassword")
-    public ResponseEntity<String> sendResetPasswordToken(
+    @PostMapping({"/reset-token", "/getTokenToResetPassword"})
+    ResponseEntity<String> sendResetPasswordToken(
             @RequestParam("email") @Email String email
-    ) {
-        authService.sendTokenToResetPassword(email);
-        return ResponseEntity.ok("Your link to reset password was sent!");
-    }
+    );
 
-    /**
-     * Resets user's password
-     *
-     * @param token            token from email link
-     * @param resetPasswordDTO new user's password and confirm password
-     * @return access token to login in good case
-     */
     @Operation(
             summary = "Reset password using token",
             description = "Updates the user password if the token is valid."
@@ -205,13 +169,10 @@ public class AuthController {
             )
     )
     @PostMapping("/reset-password/confirm")
-    public ResponseEntity<JwtResponseDTO> resetPassword(
+    ResponseEntity<JwtResponseDTO> resetPassword(
             @RequestParam("token") String token,
-            @Valid @RequestBody ResetPasswordDTO resetPasswordDTO
-    ) {
-        JwtResponseDTO response = authService.resetPassword(token, resetPasswordDTO);
-        return ResponseEntity.ok(response);
-    }
+            @Valid @RequestBody ResetPasswordRequestDto resetPasswordRequestDto
+    );
 
     @Operation(
             summary = "Verify email by verification token",
@@ -242,7 +203,7 @@ public class AuthController {
                     schema = @Schema(implementation = ProblemDetail.class))
     )
     @GetMapping("/verify")
-    public ResponseEntity<JwtResponseDTO> verifyToken(
+    ResponseEntity<JwtResponseDTO> verifyToken(
             @Parameter(
                     name = "token",
                     in = ParameterIn.QUERY,
@@ -250,14 +211,8 @@ public class AuthController {
                     required = true,
                     schema = @Schema(type = "string")
             )
-            @RequestParam String token) {
-        JwtResponseDTO jwt = authService.verifyToken(token);
-        return ResponseEntity.ok().body(jwt);
-    }
+            @RequestParam String token);
 
-    /**
-     * Refresh authentication token using refresh token
-     */
     @Operation(
             summary = "Refresh token",
             description = "Generates a new access token using a valid refresh token"
@@ -270,20 +225,17 @@ public class AuthController {
                     )))
     @ApiResponse(responseCode = "401", description = "Invalid or expired refresh token")
     @PostMapping("/refresh")
-    public ResponseEntity<JwtResponseDTO> refreshToken(
+    ResponseEntity<JwtResponseDTO> refreshToken(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "Refresh token payload",
                     required = true,
                     content = @Content(
-                            schema = @Schema(implementation = RefreshTokenRequest.class),
+                            schema = @Schema(implementation = RefreshTokenRequestDto.class),
                             examples = @ExampleObject(
                                     name = "Sample refresh request",
                                     value = "{ \"refreshToken\": \"jwt-refresh-token\" }"
                             )
                     )
             )
-            @Valid @RequestBody RefreshTokenRequest request) {
-        JwtResponseDTO jwt = authService.refreshToken(request);
-        return ResponseEntity.ok(jwt);
-    }
+            @Valid @RequestBody RefreshTokenRequestDto request);
 }

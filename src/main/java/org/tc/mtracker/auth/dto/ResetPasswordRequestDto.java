@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import org.hibernate.validator.constraints.Length;
 
 @Schema(description = "New user's password")
-public record ResetPasswordDTO(
+public record ResetPasswordRequestDto(
         @Schema(
                 description = "User's password (min 8 chars).",
                 example = "Example8",

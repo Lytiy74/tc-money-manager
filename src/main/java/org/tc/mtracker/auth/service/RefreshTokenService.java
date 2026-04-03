@@ -1,12 +1,14 @@
-package org.tc.mtracker.auth;
+package org.tc.mtracker.auth.service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.tc.mtracker.auth.model.RefreshToken;
+import org.tc.mtracker.auth.repository.RefreshTokenRepository;
 import org.tc.mtracker.security.JwtService;
 import org.tc.mtracker.user.User;
+import org.tc.mtracker.utils.exceptions.InvalidRefreshTokenException;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -38,7 +40,7 @@ public class RefreshTokenService {
     public RefreshToken verifyExpiration(RefreshToken token) {
         if (token.getExpiryDate().isBefore(LocalDateTime.now())) {
             refreshTokenRepository.delete(token);
-            throw new RuntimeException("Refresh token was expired. Please make a new sign-in request");
+            throw new InvalidRefreshTokenException("Refresh token expired. Please sign in again.");
         }
         return token;
     }

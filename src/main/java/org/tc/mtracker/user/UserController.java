@@ -17,8 +17,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.tc.mtracker.common.image.ValidImage;
-import org.tc.mtracker.user.dto.RequestUpdateUserEmailDTO;
-import org.tc.mtracker.user.dto.RequestUpdateUserPasswordDTO;
 import org.tc.mtracker.user.dto.RequestUpdateUserProfileDTO;
 import org.tc.mtracker.user.dto.ResponseUserDTO;
 
@@ -77,53 +75,9 @@ public class UserController {
             @RequestParam(name = "avatar", required = false) MultipartFile avatar,
             @Parameter(hidden = true) Authentication auth
     ) {
-        ResponseUserDTO responseUserProfileDTO = userService.updateProfile(dto, avatar, auth);
+        ResponseUserDTO responseUserProfileDTO = userService.updateProfile(dto, avatar, auth.getName());
         return ResponseEntity.ok()
                 .body(responseUserProfileDTO);
-    }
-
-    @PostMapping(value = "/me/update-email")
-    public ResponseEntity<ResponseUserDTO> updateEmail(
-            @RequestBody RequestUpdateUserEmailDTO dto,
-            @Parameter(hidden = true) Authentication auth) {
-        userService.updateEmail(dto, auth);
-        return ResponseEntity.ok().build();
-    }
-
-    @Operation(summary = "Update user's password",
-            description = "Updates the user's password by new one.")
-    @ApiResponse(
-            responseCode = "200",
-            description = "Password updated successfully"
-    )
-    @ApiResponse(
-            responseCode = "400",
-            description = "Invalid password format",
-            content = @Content(
-                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                    schema = @Schema(implementation = ProblemDetail.class)
-            )
-    )
-    @ApiResponse(
-            responseCode = "404",
-            description = "User not found",
-            content = @Content(
-                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                    schema = @Schema(implementation = ProblemDetail.class)
-            )
-    )
-    @PutMapping(value = "/me/update-password")
-    public ResponseEntity<Void> updatePassword(
-            @RequestBody @Valid RequestUpdateUserPasswordDTO dto,
-            @Parameter(hidden = true) Authentication auth) {
-        userService.updatePassword(dto, auth);
-        return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/verify-email")
-    public ResponseEntity<Void> verifyEmail(@RequestParam String token) {
-        userService.verifyEmailUpdate(token);
-        return ResponseEntity.ok().build();
     }
 
     @ApiResponse(responseCode = "200", description = "User profile returned",
@@ -143,6 +97,6 @@ public class UserController {
                     examples = @ExampleObject(value = "Internal error: NullPointerException")))
     @GetMapping("/me")
     public ResponseEntity<ResponseUserDTO> getUserProfile(Authentication auth) {
-        return ResponseEntity.ok(userService.getUser(auth));
+        return ResponseEntity.ok(userService.getUser(auth.getName()));
     }
 }
