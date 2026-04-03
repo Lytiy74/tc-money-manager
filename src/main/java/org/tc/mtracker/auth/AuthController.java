@@ -30,6 +30,7 @@ import org.tc.mtracker.security.JwtResponseDTO;
 public class AuthController {
 
     private final AuthService authService;
+    private final RegistrationService registrationService;
 
     @Operation(summary = "Sign up a new user",
             description = "Creates a new user and sends email verification link. Account not activated until verified")
@@ -79,7 +80,7 @@ public class AuthController {
             @RequestPart(name = "avatar", required = false) MultipartFile avatar
 
     ) {
-        AuthResponseDTO authResponseDTO = authService.signUp(authRequestDTO, avatar);
+        AuthResponseDTO authResponseDTO = registrationService.signUp(authRequestDTO, avatar);
         return ResponseEntity.status(HttpStatus.CREATED).body(authResponseDTO);
     }
 

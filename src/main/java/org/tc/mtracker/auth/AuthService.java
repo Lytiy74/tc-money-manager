@@ -3,30 +3,24 @@ package org.tc.mtracker.auth;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
-import org.tc.mtracker.account.Account;
-import org.tc.mtracker.account.AccountRepository;
-import org.tc.mtracker.auth.dto.*;
+import org.tc.mtracker.auth.dto.LoginRequestDto;
+import org.tc.mtracker.auth.dto.RefreshTokenRequest;
+import org.tc.mtracker.auth.dto.ResetPasswordDTO;
 import org.tc.mtracker.security.CustomUserDetails;
 import org.tc.mtracker.security.JwtResponseDTO;
 import org.tc.mtracker.security.JwtService;
 import org.tc.mtracker.user.User;
 import org.tc.mtracker.user.UserRepository;
 import org.tc.mtracker.user.UserService;
-import org.tc.mtracker.utils.S3Service;
 import org.tc.mtracker.utils.exceptions.UserAlreadyActivatedException;
-import org.tc.mtracker.utils.exceptions.UserAlreadyExistsException;
 import org.tc.mtracker.utils.exceptions.UserNotActivatedException;
 import org.tc.mtracker.utils.exceptions.UserResetPasswordException;
 
-import java.math.BigDecimal;
 import java.util.Map;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -37,48 +31,12 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final UserService userService;
-    private final AccountRepository accountRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
-    private final S3Service imageService;
     private final RefreshTokenService refreshTokenService;
 
-    private final AuthMapper authMapper;
 
-    @Transactional
-    public AuthResponseDTO signUp(AuthRequestDTO dto, MultipartFile avatar) {
-        if (userService.isExistsByEmail(dto.email())) {
-            throw new UserAlreadyExistsException("User with this email already exists");
-        }
-
-        String imageKey = (avatar == null || avatar.isEmpty()) ? null : UUID.randomUUID().toString();
-        String avatarUrl = uploadAvatar(imageKey, avatar);
-
-        User user = User.builder()
-                .email(dto.email())
-                .fullName(dto.fullName())
-                .password(passwordEncoder.encode(dto.password()))
-                .currencyCode(dto.currencyCode())
-                .avatarId(imageKey)
-                .activated(false)
-                .build();
-        User savedUser = userService.save(user);
-
-        Account defaultAccount = Account.builder()
-                .user(savedUser)
-                .balance(BigDecimal.ZERO)
-                .build();
-        Account savedDefaultAccount = accountRepository.save(defaultAccount);
-
-        savedUser.addAccount(savedDefaultAccount);
-        savedUser.setDefaultAccount(savedDefaultAccount);
-        savedUser = userService.save(savedUser);
-
-        emailService.sendVerificationEmail(savedUser);
-        log.info("User with id {} is registered successfully.", savedUser.getId());
-        return authMapper.toAuthResponseDTO(savedUser, avatarUrl);
-    }
 
     public JwtResponseDTO login(LoginRequestDto dto) {
         User user = userRepository.findByEmail(dto.email()).orElseThrow(
@@ -180,13 +138,6 @@ public class AuthService {
     }
 
 
-    private @Nullable String uploadAvatar(String imageKey, MultipartFile avatar) {
-        if (imageKey == null || avatar == null || avatar.isEmpty()) {
-            return null;
-        }
 
-        imageService.saveFile(imageKey, avatar);
-        return imageService.generatePresignedUrl(imageKey);
-    }
 }
 
