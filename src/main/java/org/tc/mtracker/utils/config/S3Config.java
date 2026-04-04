@@ -8,7 +8,11 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+
+import java.net.URI;
 
 @Configuration
 @EnableConfigurationProperties(AwsProperties.class)
@@ -22,19 +26,34 @@ public class S3Config {
 
     @Bean
     public S3Client s3Client() {
-        return S3Client.builder()
+        S3ClientBuilder builder = S3Client.builder()
                 .region(Region.of(awsProperties.region()))
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(awsProperties.accessKeyId(), awsProperties.secretAccessKey())))
-                .build();
+                .serviceConfiguration(S3Configuration.builder()
+                        .pathStyleAccessEnabled(awsProperties.s3().pathStyleAccessEnabled()).build());
+
+        if (awsProperties.endpoint() != null && !awsProperties.endpoint().isBlank()) {
+            builder.endpointOverride(URI.create(awsProperties.endpoint()));
+        }
+
+        return builder.build();
     }
 
     @Bean
     public S3Presigner s3Presigner() {
-        return S3Presigner.builder()
+        S3Presigner.Builder builder = S3Presigner.builder()
                 .region(Region.of(awsProperties.region()))
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(awsProperties.accessKeyId(), awsProperties.secretAccessKey())))
-                .build();
+                .serviceConfiguration(S3Configuration.builder()
+                        .pathStyleAccessEnabled(awsProperties.s3().pathStyleAccessEnabled())
+                        .build());
+
+        if (awsProperties.endpoint() != null && !awsProperties.endpoint().isBlank()) {
+            builder.endpointOverride(URI.create(awsProperties.endpoint()));
+        }
+
+        return builder.build();
     }
 }

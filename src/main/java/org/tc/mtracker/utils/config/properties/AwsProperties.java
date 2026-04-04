@@ -7,8 +7,11 @@ public record AwsProperties(
         String region,
         String accessKeyId,
         String secretAccessKey,
+        String endpoint,
         S3 s3
 ) {
-    public record S3(String bucketName) {
+    public record S3(
+            String bucketName,
+            boolean pathStyleAccessEnabled) {
     }
 }
