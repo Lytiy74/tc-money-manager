@@ -31,7 +31,8 @@ spring:
 security:
   jwt:
     secret-key: ${MT_JWT_SECRET_KEY}
-    expiration-time: ${MT_JWT_EXPIRATION_TIME}
+    access-token-expiration: ${MT_JWT_EXPIRATION_TIME}
+    refresh-token-expiration: ${MT_JWT_REFRESH_EXPIRATION:86400}
 
 aws:
   region: ${MT_AWS_REGION}

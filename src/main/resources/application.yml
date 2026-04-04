@@ -46,9 +46,8 @@ logging:
 security:
   jwt:
     secret-key: ${L_MT_JWT_SECRET_KEY}
-    expiration-time: 900000 # 15 min in milliseconds
-    refresh-expiration: 86400 # 24 hours in seconds
-    test-expiration: 60 # 1 minute for tests
+    access-token-expiration: 900000 # 15 min in milliseconds
+    refresh-token-expiration: 86400 # 24 hours in seconds
 
 aws:
   region: ${L_MT_AWS_REGION}

@@ -1,9 +1,9 @@
 package org.tc.mtracker.utils;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.tc.mtracker.utils.config.properties.AwsProperties;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
@@ -25,8 +25,7 @@ public class S3Service {
 
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
-    @Value("${aws.s3.bucket-name}")
-    private String bucketName;
+    private final AwsProperties awsProperties;
 
 
     public void saveFile(String objectKey, MultipartFile file) {
@@ -65,14 +64,14 @@ public class S3Service {
         }
 
         s3Client.deleteObject(DeleteObjectRequest.builder()
-                .bucket(bucketName)
+                .bucket(bucketName())
                 .key(objectKey)
                 .build());
     }
 
     private PutObjectRequest buildPutObjectRequest(String objectKey, MultipartFile file) {
         return PutObjectRequest.builder()
-                .bucket(bucketName)
+                .bucket(bucketName())
                 .key(objectKey)
                 .contentType(file.getContentType())
                 .build();
@@ -80,8 +79,12 @@ public class S3Service {
 
     private GetObjectRequest buildGetObjectRequest(String objectKey) {
         return GetObjectRequest.builder()
-                .bucket(bucketName)
+                .bucket(bucketName())
                 .key(objectKey)
                 .build();
+    }
+
+    private String bucketName() {
+        return awsProperties.s3().bucketName();
     }
 }
