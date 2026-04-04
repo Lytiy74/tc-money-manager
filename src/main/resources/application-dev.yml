@@ -6,6 +6,20 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+  mail:
+    host: localhost
+    port: 1025
+    username: ""
+    password: ""
+    properties:
+      mail:
+        smtp:
+          connectiontimeout: 3000
+          timeout: 3000
+          writetimeout: 3000
+          auth: false
+          starttls:
+            enable: false
 
 aws:
   region: us-east-1
