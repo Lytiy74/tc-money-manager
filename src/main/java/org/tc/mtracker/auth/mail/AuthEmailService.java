@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.tc.mtracker.utils.config.properties.AppProperties;
 
@@ -20,6 +21,7 @@ public class AuthEmailService {
     private final JavaMailSender javaMailSender;
     private final AppProperties appProperties;
 
+    @Async
     public void sendVerificationEmail(String email, String token) {
         String verificationLink = String.format("%s/verify?token=%s", frontendUrl(), token);
         sendPlainTextEmail(
@@ -30,14 +32,7 @@ public class AuthEmailService {
         log.info("Verification email sent to user with email {}", email);
     }
 
-    public void sendPlainTextEmail(String to, String subject, String content) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(to);
-        message.setSubject(subject);
-        message.setText(content);
-        javaMailSender.send(message);
-    }
-
+    @Async
     public void sendResetPassword(String email, String resetToken) {
         String verificationLink = String.format("%s/reset-password?resetToken=%s", frontendUrl(), resetToken);
 
@@ -46,8 +41,17 @@ public class AuthEmailService {
                 "Please click on this link within 24 hours to reset your password: " + verificationLink);
     }
 
+    @Async
     public void sendPasswordChangedNotification(String email) {
         sendPlainTextEmail(email, PASSWORD_CHANGED_SUBJECT, PASSWORD_CHANGED_CONTENT);
+    }
+
+    private void sendPlainTextEmail(String to, String subject, String content) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(to);
+        message.setSubject(subject);
+        message.setText(content);
+        javaMailSender.send(message);
     }
 
     private String frontendUrl() {
