@@ -1,7 +1,9 @@
 package org.tc.mtracker.utils.exceptions;
 
-public class AccountNotFoundException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class AccountNotFoundException extends ApiException {
     public AccountNotFoundException(String message) {
-        super(message);
+        super(HttpStatus.NOT_FOUND, "account_not_found", message);
     }
 }

@@ -1,7 +1,9 @@
 package org.tc.mtracker.utils.exceptions;
 
-public class UserAlreadyActivatedException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class UserAlreadyActivatedException extends ApiException {
     public UserAlreadyActivatedException(String message) {
-        super(message);
+        super(HttpStatus.CONFLICT, "user_already_activated", message);
     }
 }

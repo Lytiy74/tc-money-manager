@@ -1,7 +1,9 @@
 package org.tc.mtracker.utils.exceptions;
 
-public class UserNotActivatedException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class UserNotActivatedException extends ApiException {
     public UserNotActivatedException(String message) {
-        super(message);
+        super(HttpStatus.FORBIDDEN, "user_not_activated", message);
     }
 }

@@ -1,7 +1,9 @@
 package org.tc.mtracker.utils.exceptions;
 
-public class InvalidPasswordException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class InvalidPasswordException extends ApiException {
     public InvalidPasswordException(String message) {
-        super(message);
+        super(HttpStatus.BAD_REQUEST, "invalid_password", message);
     }
 }

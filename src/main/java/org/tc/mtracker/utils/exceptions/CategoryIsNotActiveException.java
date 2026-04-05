@@ -1,7 +1,9 @@
 package org.tc.mtracker.utils.exceptions;
 
-public class CategoryIsNotActiveException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class CategoryIsNotActiveException extends ApiException {
     public CategoryIsNotActiveException(String message) {
-        super(message);
+        super(HttpStatus.BAD_REQUEST, "category_inactive", message);
     }
 }

@@ -122,7 +122,10 @@ class AuthApiTest extends BaseApiIntegrationTest {
                     .uri("/api/v1/auth/sign-up")
                     .body(parts.build())
                     .exchange()
-                    .expectStatus().isEqualTo(HttpStatus.CONFLICT);
+                    .expectStatus().isEqualTo(HttpStatus.CONFLICT)
+                    .expectBody()
+                    .jsonPath("$.detail").isEqualTo("User with this email already exists")
+                    .jsonPath("$.code").isEqualTo("user_already_exists");
         }
 
         @Test
@@ -176,7 +179,22 @@ class AuthApiTest extends BaseApiIntegrationTest {
                     .uri("/api/v1/auth/login")
                     .body(new LoginRequestDto(user.getEmail(), DatabaseTestDataFactory.DEFAULT_PASSWORD))
                     .exchange()
-                    .expectStatus().isForbidden();
+                    .expectStatus().isForbidden()
+                    .expectBody()
+                    .jsonPath("$.detail").isEqualTo("Account is not activated yet.")
+                    .jsonPath("$.code").isEqualTo("user_not_activated");
+        }
+
+        @Test
+        void shouldReturnGenericBadCredentialsMessageForUnknownUser() {
+            restTestClient.post()
+                    .uri("/api/v1/auth/login")
+                    .body(new LoginRequestDto("missing@example.com", DatabaseTestDataFactory.DEFAULT_PASSWORD))
+                    .exchange()
+                    .expectStatus().isUnauthorized()
+                    .expectBody()
+                    .jsonPath("$.detail").isEqualTo("Invalid email or password.")
+                    .jsonPath("$.code").isEqualTo("bad_credentials");
         }
 
         @Test
