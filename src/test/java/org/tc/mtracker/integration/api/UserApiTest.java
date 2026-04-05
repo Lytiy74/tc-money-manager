@@ -221,6 +221,24 @@ class UserApiTest extends BaseApiIntegrationTest {
         assertThat(userRepository.findByEmail(user.getEmail()).orElseThrow().getFullName()).isEqualTo(fullName);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"null", "invalidmail.com", "invalid@"})
+    void shouldRejectWithInvalidEmail(String invalidEmail) {
+        String mail = "valid@example.com";
+        User user = fixtures.createUser(mail);
+
+        restTestClient.post()
+                .uri("/api/v1/users/me/update-email")
+                .header("Authorization", authHeader(user))
+                .body(new UpdateEmailRequestDto(invalidEmail))
+                .exchange()
+                .expectStatus().isBadRequest();
+
+        verifyNoInteractions(authEmailService);
+        assertThat(user.getEmail()).isEqualTo(mail);
+
+    }
+
     @Test
     void shouldRejectUnauthenticatedProfileAccess() {
         restTestClient.get()
