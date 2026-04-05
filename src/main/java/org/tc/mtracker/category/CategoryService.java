@@ -1,6 +1,7 @@
 package org.tc.mtracker.category;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.tc.mtracker.category.dto.CategoryResponseDTO;
@@ -17,6 +18,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
@@ -28,6 +30,9 @@ public class CategoryService {
         String normalizedName = normalizeNameFilter(name);
         List<TransactionType> normalizedTypes = normalizeTypes(types);
         CategoryStatus status = archived ? CategoryStatus.ARCHIVED : CategoryStatus.ACTIVE;
+
+        log.debug("Loading categories for userId={} archived={} name={} types={}",
+                currentUser.getId(), archived, normalizedName, normalizedTypes);
 
         List<Category> categories = categoryRepository.findGlobalAndUserCategories(
                 currentUser,
@@ -42,12 +47,16 @@ public class CategoryService {
     public CategoryResponseDTO getCategoryById(Long categoryId, Authentication auth) {
         User currentUser = userService.getCurrentAuthenticatedUser(auth);
         Category category = findAccessibleById(categoryId, currentUser);
+        log.debug("Category returned for userId={} categoryId={}", currentUser.getId(), categoryId);
         return categoryMapper.toDto(category);
     }
 
     public Category findAccessibleById(Long id, User currentUser) {
         return categoryRepository.findAccessibleById(id, currentUser)
-                .orElseThrow(() -> new CategoryNotFoundException("Category with id %d not found".formatted(id)));
+                .orElseThrow(() -> {
+                    log.warn("Category not found or inaccessible userId={} categoryId={}", currentUser.getId(), id);
+                    return new CategoryNotFoundException("Category with id %d not found".formatted(id));
+                });
     }
 
     public CategoryResponseDTO createCategory(CreateCategoryDTO dto, Authentication auth) {
@@ -64,6 +73,7 @@ public class CategoryService {
                 .build();
 
         Category saved = categoryRepository.save(newCategory);
+        log.info("Category created userId={} categoryId={} type={}", currentUser.getId(), saved.getId(), saved.getType());
 
         return categoryMapper.toDto(saved);
     }
@@ -80,6 +90,8 @@ public class CategoryService {
         category.setStatus(dto.status());
 
         Category savedCategory = categoryRepository.save(category);
+        log.info("Category updated userId={} categoryId={} status={}",
+                currentUser.getId(), savedCategory.getId(), savedCategory.getStatus());
 
         return categoryMapper.toDto(savedCategory);
     }
@@ -91,12 +103,16 @@ public class CategoryService {
         if (category.getStatus() != CategoryStatus.ARCHIVED) {
             category.setStatus(CategoryStatus.ARCHIVED);
             categoryRepository.save(category);
+            log.info("Category archived userId={} categoryId={}", currentUser.getId(), categoryId);
         }
     }
 
     private Category findOwnedById(Long categoryId, User currentUser) {
         return categoryRepository.findOwnedById(categoryId, currentUser)
-                .orElseThrow(() -> new CategoryNotFoundException("Category with id %d not found".formatted(categoryId)));
+                .orElseThrow(() -> {
+                    log.warn("Owned category not found userId={} categoryId={}", currentUser.getId(), categoryId);
+                    return new CategoryNotFoundException("Category with id %d not found".formatted(categoryId));
+                });
     }
 
     private void validateDuplicateCategory(String name, TransactionType type, User currentUser, Long excludedCategoryId) {
@@ -106,7 +122,9 @@ public class CategoryService {
                         && (excludedCategoryId == null || !excludedCategoryId.equals(category.getId())));
 
         if (isDuplicate) {
-            throw new CategoryAlreadyExistsException("This category is already exists. Please enter another name or select another type");
+            log.warn("Category rejected as duplicate userId={} name={} type={} excludedCategoryId={}",
+                    currentUser.getId(), name, type, excludedCategoryId);
+            throw new CategoryAlreadyExistsException("Category with this name and type already exists.");
         }
     }
 

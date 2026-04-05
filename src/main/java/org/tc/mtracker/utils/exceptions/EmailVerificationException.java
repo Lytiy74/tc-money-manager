@@ -1,7 +1,9 @@
 package org.tc.mtracker.utils.exceptions;
 
-public class EmailVerificationException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class EmailVerificationException extends ApiException {
     public EmailVerificationException(String message) {
-        super(message);
+        super(HttpStatus.BAD_REQUEST, "email_verification_failed", message);
     }
 }

@@ -1,7 +1,9 @@
 package org.tc.mtracker.utils.exceptions;
 
-public class UserResetPasswordException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class UserResetPasswordException extends ApiException {
     public UserResetPasswordException(String message) {
-        super(message);
+        super(HttpStatus.BAD_REQUEST, "password_reset_failed", message);
     }
 }

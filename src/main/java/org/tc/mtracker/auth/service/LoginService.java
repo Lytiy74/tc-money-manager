@@ -18,6 +18,7 @@ import org.tc.mtracker.utils.exceptions.UserNotActivatedException;
 @RequiredArgsConstructor
 @Slf4j
 public class LoginService {
+    private static final String BAD_CREDENTIALS_MESSAGE = "Invalid email or password.";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -26,15 +27,20 @@ public class LoginService {
 
     public JwtResponseDTO login(LoginRequestDto dto) {
         User user = userRepository.findByEmail(dto.email()).orElseThrow(
-                () -> new BadCredentialsException("User with email " + dto.email() + " does not exist.")
+                () -> {
+                    log.warn("Login failed: user not found for email={}", dto.email());
+                    return new BadCredentialsException(BAD_CREDENTIALS_MESSAGE);
+                }
         );
 
         if (!user.isActivated()) {
-            throw new UserNotActivatedException("User with id " + user.getId() + " is not activated yet.");
+            log.warn("Login failed: account is not activated for userId={} email={}", user.getId(), user.getEmail());
+            throw new UserNotActivatedException("Account is not activated yet.");
         }
 
         if (!passwordEncoder.matches(dto.password(), user.getPassword())) {
-            throw new BadCredentialsException("Invalid credentials. Password does not match!");
+            log.warn("Login failed: invalid password for email={}", dto.email());
+            throw new BadCredentialsException(BAD_CREDENTIALS_MESSAGE);
         }
 
         String accessToken = jwtService.generateToken(new CustomUserDetails(user));

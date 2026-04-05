@@ -1,7 +1,9 @@
 package org.tc.mtracker.utils.exceptions;
 
-public class MoneyFlowTypeMismatchException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class MoneyFlowTypeMismatchException extends ApiException {
     public MoneyFlowTypeMismatchException(String message) {
-        super(message);
+        super(HttpStatus.BAD_REQUEST, "money_flow_type_mismatch", message);
     }
 }

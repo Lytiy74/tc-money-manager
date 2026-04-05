@@ -32,12 +32,16 @@ public class UserService {
 
     public ResponseUserDTO getUser(String currentUserEmail) {
         User user = getCurrentAuthenticatedUser(currentUserEmail);
+        log.debug("Loading user profile for email={}", currentUserEmail);
         return userMapper.toDto(user, generateAvatarUrl(user));
     }
 
     public User getCurrentAuthenticatedUser(String currentUserEmail) {
         return userRepository.findByEmail(currentUserEmail).orElseThrow(
-                () -> new UserNotFoundException("User with email '%s' not found".formatted(currentUserEmail))
+                () -> {
+                    log.warn("Authenticated user record not found for email={}", currentUserEmail);
+                    return new UserNotFoundException("User not found.");
+                }
         );
     }
 
@@ -75,7 +79,7 @@ public class UserService {
             user.setAvatarId(avatarId);
         }
         s3Service.saveFile(avatarId, avatar);
-        log.info("Avatar with id {} is uploaded successfully!", avatarId);
+        log.info("Avatar uploaded successfully for userId={} avatarId={}", user.getId(), avatarId);
     }
 
 

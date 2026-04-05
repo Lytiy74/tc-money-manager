@@ -22,9 +22,10 @@ public record RegistrationRequestDto(
         @NotBlank @Length(min = 8, max = 72)
         @Pattern(regexp = "^((?=\\S*?[A-Z])(?=\\S*?[a-z])(?=\\S*?[!@#$%^&*]).{7,})\\S$")
         String password,
+
         @Schema(description = "User's full name", example = "Abraham Lincoln")
         @NotBlank @Length(min = 3, max = 35)
-        @Pattern(regexp = "^[a-zA-zА-Яа-я]* ?[a-zA-zА-Яа-я]*$")
+        @Pattern(regexp = "^[A-Za-zА-ЯІЄЇҐа-яієїґ'’ʼ]([A-Za-zА-ЯІЄЇҐа-яієїґ'’ʼ\\s-]*[A-Za-zА-ЯІЄЇҐа-яієїґ'’ʼ])?$")
         String fullName,
 
         @Schema(description = "User's main currency (ISO 4217)", example = "USD")

@@ -27,6 +27,7 @@ import java.util.Map;
 @Slf4j
 public class PasswordManagementService {
     private static final String PASSWORD_RESET_PURPOSE = "password_reset";
+    private static final String BAD_CREDENTIALS_MESSAGE = "Invalid email or password.";
 
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
@@ -36,7 +37,10 @@ public class PasswordManagementService {
 
     public void sendTokenToResetPassword(String email) {
         User user = userRepository.findByEmail(email).orElseThrow(
-                () -> new BadCredentialsException("User with email " + email + " does not exist.")
+                () -> {
+                    log.warn("Password reset request rejected: user not found for email={}", email);
+                    return new BadCredentialsException(BAD_CREDENTIALS_MESSAGE);
+                }
         );
 
         CustomUserDetails userDetails = new CustomUserDetails(user);
@@ -49,11 +53,13 @@ public class PasswordManagementService {
     @Transactional
     public JwtResponseDTO resetPassword(String token, ResetPasswordRequestDto dto) {
         if (!dto.password().equals(dto.confirmPassword())) {
+            log.warn("Password reset rejected: confirmation mismatch");
             throw new UserResetPasswordException("Passwords do not match!");
         }
 
         String purpose = jwtService.extractClaim(token, claims -> claims.get("purpose", String.class));
         if (!PASSWORD_RESET_PURPOSE.equals(purpose)) {
+            log.warn("Password reset rejected: invalid token purpose={}", purpose);
             throw new JwtException("Invalid token purpose");
         }
 
@@ -74,8 +80,16 @@ public class PasswordManagementService {
     public void updatePassword(UpdatePasswordRequestDto dto, String currentUserEmail) {
         User user = findUserByEmail(currentUserEmail);
 
-        verifyCurrentPasswordWithUserInput(dto.currentPassword(), user.getPassword());
-        verifyPasswordConfirmation(dto.newPassword(), dto.confirmNewPassword());
+        if (!passwordEncoder.matches(dto.currentPassword(), user.getPassword())) {
+            log.warn("Password update rejected: current password mismatch for userId={}", user.getId());
+            throw new InvalidPasswordException("Current password is incorrect.");
+        }
+
+        if (!dto.newPassword().equals(dto.confirmNewPassword())) {
+            log.warn("Password update rejected: confirmation mismatch for userId={}", user.getId());
+            throw new InvalidPasswordException("Passwords do not match.");
+        }
+
         user.setPassword(passwordEncoder.encode(dto.newPassword()));
         userRepository.save(user);
         authEmailService.sendPasswordChangedNotification(user.getEmail());
@@ -84,19 +98,10 @@ public class PasswordManagementService {
 
     private User findUserByEmail(String email) {
         return userRepository.findByEmail(email).orElseThrow(
-                () -> new UserNotFoundException("User with email '%s' not found".formatted(email))
+                () -> {
+                    log.warn("Password management flow failed: user not found for email={}", email);
+                    return new UserNotFoundException("User not found.");
+                }
         );
-    }
-
-    private void verifyPasswordConfirmation(String firstPassword, String secondPassword) {
-        if (!firstPassword.equals(secondPassword)) {
-            throw new InvalidPasswordException("Password mismatch");
-        }
-    }
-
-    private void verifyCurrentPasswordWithUserInput(String passwordToCheck, String currentUserPassword) {
-        if (!passwordEncoder.matches(passwordToCheck, currentUserPassword)) {
-            throw new InvalidPasswordException("Password mismatch");
-        }
     }
 }

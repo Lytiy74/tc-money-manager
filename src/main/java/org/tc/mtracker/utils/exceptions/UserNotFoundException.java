@@ -1,7 +1,9 @@
 package org.tc.mtracker.utils.exceptions;
 
-public class UserNotFoundException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class UserNotFoundException extends ApiException {
     public UserNotFoundException(String message) {
-        super(message);
+        super(HttpStatus.NOT_FOUND, "user_not_found", message);
     }
 }

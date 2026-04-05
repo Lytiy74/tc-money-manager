@@ -35,14 +35,16 @@ public class EmailVerificationService {
     public JwtResponseDTO verifyToken(String token) {
         String purpose = jwtService.extractClaim(token, claims -> claims.get("purpose", String.class));
         if (!EMAIL_VERIFICATION_PURPOSE.equals(purpose)) {
-            throw new JwtException("Invalid token type for verification");
+            log.warn("Email verification rejected: invalid token purpose={}", purpose);
+            throw new JwtException("Invalid token purpose");
         }
 
         String email = jwtService.extractUsername(token);
         User user = findUserByEmail(email);
 
         if (user.isActivated()) {
-            throw new UserAlreadyActivatedException("User with email " + email + " is already activated");
+            log.warn("Email verification skipped: user already activated email={}", email);
+            throw new UserAlreadyActivatedException("Account is already activated.");
         }
 
         user.setActivated(true);
@@ -60,7 +62,8 @@ public class EmailVerificationService {
         User user = findUserByEmail(currentUserEmail);
 
         if (userRepository.existsByEmail(dto.email())) {
-            throw new UserAlreadyExistsException("Email already used");
+            log.warn("Email update rejected: target email already exists currentEmail={} targetEmail={}", currentUserEmail, dto.email());
+            throw new UserAlreadyExistsException("User with this email already exists.");
         }
 
         user.setPendingEmail(dto.email());
@@ -74,31 +77,38 @@ public class EmailVerificationService {
         authEmailService.sendVerificationEmail(dto.email(), generatedToken);
 
         userRepository.save(user);
+        log.info("Email update verification initiated for userId={} targetEmail={}", user.getId(), dto.email());
     }
 
     @Transactional
     public void verifyEmailUpdate(String token) {
         String purpose = jwtService.extractClaim(token, claims -> claims.get("purpose", String.class));
         if (!EMAIL_UPDATE_VERIFICATION_PURPOSE.equals(purpose)) {
-            throw new JwtException("Invalid token type for verification");
+            log.warn("Email update verification rejected: invalid token purpose={}", purpose);
+            throw new JwtException("Invalid token purpose");
         }
 
         String email = jwtService.extractUsername(token);
         User user = findUserByEmail(email);
 
         if (user.getVerificationToken() == null || !token.equals(user.getVerificationToken())) {
-            throw new EmailVerificationException("Invalid token for verification");
+            log.warn("Email update verification rejected: token mismatch for userId={}", user.getId());
+            throw new EmailVerificationException("Invalid verification token.");
         }
 
         user.setEmail(user.getPendingEmail());
         user.setPendingEmail(null);
         user.setVerificationToken(null);
         userRepository.save(user);
+        log.info("Email updated successfully for userId={}", user.getId());
     }
 
     private User findUserByEmail(String email) {
         return userRepository.findByEmail(email).orElseThrow(
-                () -> new UserNotFoundException("User with email '%s' not found".formatted(email))
+                () -> {
+                    log.warn("Email verification flow failed: user not found for email={}", email);
+                    return new UserNotFoundException("User not found.");
+                }
         );
     }
 }

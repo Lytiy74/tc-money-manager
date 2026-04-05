@@ -1,6 +1,7 @@
 package org.tc.mtracker.transaction;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
@@ -45,7 +47,7 @@ public class TransactionService {
         Transaction transaction = transactionMapper.toEntity(createRequestDTO, user);
         Category category = getCategory(createRequestDTO, user);
 
-        validateTransactionType(createRequestDTO, category);
+        validateTransactionType(createRequestDTO, category, user);
 
         transaction.setUser(user);
         transaction.setAccount(account);
@@ -55,6 +57,8 @@ public class TransactionService {
 
         Transaction saved = transactionRepository.save(transaction);
         applyBalanceDelta(account, saved);
+        log.info("Transaction created userId={} transactionId={} accountId={} amount={} type={}",
+                user.getId(), saved.getId(), account.getId(), saved.getAmount(), saved.getType());
 
         List<String> presignedUrls = generatePresignedUrlsForReceipts(saved);
 
@@ -71,6 +75,8 @@ public class TransactionService {
             LocalDate dateTo
     ) {
         User user = userService.getCurrentAuthenticatedUser(auth);
+        log.debug("Loading transactions for userId={} accountId={} categoryId={} type={} dateFrom={} dateTo={}",
+                user.getId(), accountId, categoryId, type, dateFrom, dateTo);
 
         if (accountId != null) {
             resolveAccount(user, accountId);
@@ -89,6 +95,7 @@ public class TransactionService {
     public TransactionResponseDTO getTransactionById(Long transactionId, Authentication auth) {
         User user = userService.getCurrentAuthenticatedUser(auth);
         Transaction transaction = findOwnedTransaction(transactionId, user);
+        log.debug("Transaction returned for userId={} transactionId={}", user.getId(), transactionId);
         return toResponseDto(transaction);
     }
 
@@ -101,7 +108,7 @@ public class TransactionService {
         Account targetAccount = resolveAccount(user, updateRequestDTO.accountId());
         Category category = getCategory(updateRequestDTO, user);
 
-        validateTransactionType(updateRequestDTO, category);
+        validateTransactionType(updateRequestDTO, category, user);
 
         revertBalanceDelta(currentAccount, transaction);
         transactionMapper.updateEntity(updateRequestDTO, transaction);
@@ -110,6 +117,8 @@ public class TransactionService {
         applyBalanceDelta(targetAccount, transaction);
 
         Transaction saved = transactionRepository.save(transaction);
+        log.info("Transaction updated userId={} transactionId={} accountId={} amount={} type={}",
+                user.getId(), saved.getId(), targetAccount.getId(), saved.getAmount(), saved.getType());
         return transactionMapper.toDto(saved, generatePresignedUrlsForReceipts(saved));
     }
 
@@ -121,25 +130,33 @@ public class TransactionService {
         revertBalanceDelta(transaction.getAccount(), transaction);
         deleteReceipts(transaction);
         transactionRepository.delete(transaction);
+        log.info("Transaction deleted userId={} transactionId={}", user.getId(), transactionId);
     }
 
     private Account resolveAccount(User user, Long accountId) {
         if (accountId == null) {
             Account defaultAccount = user.getDefaultAccount();
             if (defaultAccount == null) {
+                log.warn("Transaction request rejected: default account missing for userId={}", user.getId());
                 throw new AccountNotFoundException("Current user does not have default account");
             }
             return defaultAccount;
         }
 
         return accountRepository.findByIdAndUser(accountId, user)
-                .orElseThrow(() -> new AccountNotFoundException("Account with id %d not found".formatted(accountId)));
+                .orElseThrow(() -> {
+                    log.warn("Transaction request rejected: account not found userId={} accountId={}", user.getId(), accountId);
+                    return new AccountNotFoundException("Account with id %d not found".formatted(accountId));
+                });
     }
 
     private Category getCategory(TransactionCreateRequestDTO createRequestDTO, User currentUser) {
         Category category = categoryService.findAccessibleById(createRequestDTO.categoryId(), currentUser);
-        if (!category.getStatus().equals(CategoryStatus.ACTIVE))
-            throw new CategoryIsNotActiveException("Category is not active");
+        if (!category.getStatus().equals(CategoryStatus.ACTIVE)) {
+            log.warn("Transaction request rejected: category inactive userId={} categoryId={}",
+                    currentUser.getId(), category.getId());
+            throw new CategoryIsNotActiveException("Category is not active.");
+        }
         return category;
     }
 
@@ -153,6 +170,7 @@ public class TransactionService {
 
     private void addReceiptsToTransaction(List<MultipartFile> receipts, Transaction transaction) {
         if (receipts != null && !receipts.isEmpty()) {
+            log.debug("Uploading {} receipt(s) for transaction userId={}", receipts.size(), transaction.getUser().getId());
             for (MultipartFile receipt : receipts) {
                 ReceiptImage receiptImage = new ReceiptImage(UUID.randomUUID(), transaction);
                 s3Service.saveFile(receiptImage.getId().toString(), receipt);
@@ -179,15 +197,20 @@ public class TransactionService {
         return transactionMapper.toDto(transaction, generatePresignedUrlsForReceipts(transaction));
     }
 
-    private static void validateTransactionType(TransactionCreateRequestDTO createRequestDTO, Category category) {
+    private void validateTransactionType(TransactionCreateRequestDTO createRequestDTO, Category category, User user) {
         if (!category.getType().equals(createRequestDTO.type())) {
-            throw new MoneyFlowTypeMismatchException("Category type does not match transaction type");
+            log.warn("Transaction request rejected: type mismatch userId={} categoryId={} categoryType={} transactionType={}",
+                    user.getId(), category.getId(), category.getType(), createRequestDTO.type());
+            throw new MoneyFlowTypeMismatchException("Category type does not match transaction type.");
         }
     }
 
     private Transaction findOwnedTransaction(Long transactionId, User user) {
         return transactionRepository.findActiveByIdAndUser(transactionId, user)
-                .orElseThrow(() -> new TransactionNotFoundException("Transaction with id %d not found".formatted(transactionId)));
+                .orElseThrow(() -> {
+                    log.warn("Transaction not found userId={} transactionId={}", user.getId(), transactionId);
+                    return new TransactionNotFoundException("Transaction with id %d not found".formatted(transactionId));
+                });
     }
 
     private static BigDecimal calculateDelta(TransactionType type, BigDecimal amount) {
