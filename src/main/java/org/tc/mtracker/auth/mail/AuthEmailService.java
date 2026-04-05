@@ -2,6 +2,7 @@ package org.tc.mtracker.auth.mail;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
@@ -29,7 +30,6 @@ public class AuthEmailService {
                 EMAIL_VERIFICATION_SUBJECT,
                 "Please verify your email by clicking this link: " + verificationLink
         );
-        log.info("Verification email sent to user with email {}", email);
     }
 
     @Async
@@ -47,11 +47,17 @@ public class AuthEmailService {
     }
 
     private void sendPlainTextEmail(String to, String subject, String content) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(to);
-        message.setSubject(subject);
-        message.setText(content);
-        javaMailSender.send(message);
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(to);
+            message.setSubject(subject);
+            message.setText(content);
+            javaMailSender.send(message);
+            log.info("Email dispatched successfully subject={} recipient={}", subject, to);
+        } catch (MailException ex) {
+            log.error("Failed to dispatch email subject={} recipient={}", subject, to, ex);
+            throw ex;
+        }
     }
 
     private String frontendUrl() {

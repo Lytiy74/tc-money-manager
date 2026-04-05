@@ -23,8 +23,12 @@ public class TokenRefreshService {
                 .map(RefreshToken::getUser)
                 .map(user -> {
                     String accessToken = jwtService.generateToken(new CustomUserDetails(user));
+                    log.debug("Access token refreshed for userId={}", user.getId());
                     return new JwtResponseDTO(accessToken, request.refreshToken());
                 })
-                .orElseThrow(() -> new InvalidRefreshTokenException("Refresh token is invalid."));
+                .orElseThrow(() -> {
+                    log.warn("Refresh token rejected: token not found");
+                    return new InvalidRefreshTokenException("Refresh token is invalid.");
+                });
     }
 }

@@ -1,7 +1,9 @@
 package org.tc.mtracker.utils.exceptions;
 
-public class UserAlreadyExistsException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class UserAlreadyExistsException extends ApiException {
     public UserAlreadyExistsException(String message) {
-        super(message);
+        super(HttpStatus.CONFLICT, "user_already_exists", message);
     }
 }

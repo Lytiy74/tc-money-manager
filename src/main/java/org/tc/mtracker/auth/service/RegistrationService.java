@@ -40,6 +40,7 @@ public class RegistrationService {
     @Transactional
     public RegistrationResponseDto signUp(RegistrationRequestDto dto, MultipartFile avatar) {
         if (userRepository.existsByEmail(dto.email())) {
+            log.warn("Registration rejected: email already exists email={}", dto.email());
             throw new UserAlreadyExistsException("User with this email already exists");
         }
 
@@ -72,6 +73,7 @@ public class RegistrationService {
             return null;
         }
 
+        log.debug("Uploading avatar for registration imageKey={}", imageKey);
         imageService.saveFile(imageKey, avatar);
         return imageService.generatePresignedUrl(imageKey);
     }

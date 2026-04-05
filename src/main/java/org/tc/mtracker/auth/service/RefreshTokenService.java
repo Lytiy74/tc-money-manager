@@ -2,6 +2,7 @@ package org.tc.mtracker.auth.service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.tc.mtracker.auth.model.RefreshToken;
@@ -17,6 +18,7 @@ import java.util.UUID;
 @Service
 @Transactional
 @RequiredArgsConstructor
+@Slf4j
 public class RefreshTokenService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtService jwtService;
@@ -30,7 +32,9 @@ public class RefreshTokenService {
                 .expiryDate(LocalDateTime.now().plusSeconds(jwtService.getRefreshExpiration()))
                 .build();
 
-        return refreshTokenRepository.save(refreshToken);
+        RefreshToken savedToken = refreshTokenRepository.save(refreshToken);
+        log.debug("Refresh token created for userId={}", user.getId());
+        return savedToken;
     }
 
     public Optional<RefreshToken> findByToken(String token) {
@@ -40,6 +44,7 @@ public class RefreshTokenService {
     public RefreshToken verifyExpiration(RefreshToken token) {
         if (token.getExpiryDate().isBefore(LocalDateTime.now())) {
             refreshTokenRepository.delete(token);
+            log.warn("Rejected expired refresh token for userId={}", token.getUser().getId());
             throw new InvalidRefreshTokenException("Refresh token expired. Please sign in again.");
         }
         return token;

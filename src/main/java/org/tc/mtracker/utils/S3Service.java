@@ -1,6 +1,7 @@
 package org.tc.mtracker.utils;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.tc.mtracker.utils.config.properties.AwsProperties;
@@ -19,6 +20,7 @@ import java.time.Duration;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class S3Service {
 
     private static final Duration PRESIGNED_URL_TTL = Duration.ofMinutes(60);
@@ -37,6 +39,7 @@ public class S3Service {
                     RequestBody.fromInputStream(file.getInputStream(), file.getSize())
             );
         } catch (IOException e) {
+            log.error("Failed to upload file to object storage key={} contentType={}", objectKey, file.getContentType(), e);
             throw new UncheckedIOException("Failed to upload file to S3. key=" + objectKey, e);
         }
     }
@@ -63,10 +66,15 @@ public class S3Service {
             return;
         }
 
-        s3Client.deleteObject(DeleteObjectRequest.builder()
-                .bucket(bucketName())
-                .key(objectKey)
-                .build());
+        try {
+            s3Client.deleteObject(DeleteObjectRequest.builder()
+                    .bucket(bucketName())
+                    .key(objectKey)
+                    .build());
+        } catch (RuntimeException ex) {
+            log.error("Failed to delete file from object storage key={}", objectKey, ex);
+            throw ex;
+        }
     }
 
     private PutObjectRequest buildPutObjectRequest(String objectKey, MultipartFile file) {
