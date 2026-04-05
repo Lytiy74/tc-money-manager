@@ -1,88 +1,112 @@
-name: Build and Deploy to AWS
+name: CI and Deploy
 
 on:
+  pull_request:
+    branches:
+      - dev
+      - main
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  compile:
+  unit-tests:
+    name: Unit tests
     runs-on: ubuntu-latest
-    name: Compile project
+    timeout-minutes: 15
 
     steps:
-      - name: checkout
+      - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Setup JDK 21
+      - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:
           java-version: '21'
           distribution: 'temurin'
-          architecture: x64
           cache: 'maven'
-      - name: Run the Maven verify phase
-        run: mvn clean compile
 
-  test:
-    needs: compile
-    runs-on: ubuntu-latest
-    env:
-      L_MT_JWT_SECRET_KEY: ${{ secrets.L_MT_JWT_SECRET_KEY }}
-      L_MT_JWT_EXPIRATION_TIME: ${{ secrets.L_MT_JWT_EXPIRATION_TIME }}
-      L_MT_AWS_ACCESS_KEY_ID: ${{ secrets.L_MT_AWS_ACCESS_KEY_ID }}
-      L_MT_AWS_SECRET_KEY: ${{ secrets.L_MT_AWS_SECRET_KEY }}
-      L_MT_AWS_S3_BUCKET_NAME: ${{ secrets.L_MT_AWS_S3_BUCKET_NAME }}
-      L_MT_AWS_REGION: ${{ secrets.L_MT_AWS_REGION }}
+      - name: Run unit tests
+        run: ./mvnw -B clean test -Punit
 
-    name: Test project
-    steps:
-      - name: checkout
-        uses: actions/checkout@v6
-
-      - name: Setup JDK 21
-        uses: actions/setup-java@v5
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          architecture: x64
-          cache: 'maven'
-      - name: Run the test
-        run: mvn clean test
-      - name: Upload test report
+      - name: Upload unit test reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-report
+          name: unit-test-report
+          path: target/surefire-reports
+
+  integration-tests:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Run integration tests
+        run: ./mvnw -B clean test -Pintegration
+
+      - name: Upload integration test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-report
           path: target/surefire-reports
 
   build:
-    needs: [ compile, test ]
+    name: Build application jar
     runs-on: ubuntu-latest
-    name: build
+    needs:
+      - unit-tests
+      - integration-tests
+    timeout-minutes: 15
+
     steps:
-      - name: checkout
+      - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Setup JDK 21
+      - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:
           java-version: '21'
           distribution: 'temurin'
-          architecture: x64
           cache: 'maven'
-      - name: Run the Maven package phase
-        run: mvn clean package -DskipTests
 
-  build-docker-and-push-to-ecr:
-    if: github.event_name == 'push'
-    needs: build
+      - name: Build package
+        run: ./mvnw -B -DskipTests package
+
+      - name: Upload application artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-jar
+          path: target/*.jar
+
+  docker-push:
+    name: Build and push Docker image to ECR
     runs-on: ubuntu-latest
-    name: deploy
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    timeout-minutes: 20
+
     steps:
-      - name: checkout
+      - name: Checkout repository
         uses: actions/checkout@v6
 
       - name: Configure AWS credentials
@@ -92,16 +116,15 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Login to Amazon ECR
+      - name: Log in to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, and push image to Amazon ECR
+      - name: Build and push image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ github.sha }}
-
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
                        -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
