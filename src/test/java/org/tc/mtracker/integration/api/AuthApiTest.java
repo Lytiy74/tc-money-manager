@@ -139,6 +139,34 @@ class AuthApiTest extends BaseApiIntegrationTest {
         }
 
         @Test
+        void shouldCreateUserWithWebpAvatar() {
+            String email = "avatar-webp-user@example.com";
+            when(s3Service.generatePresignedUrl(anyString())).thenReturn("https://test-bucket.local/avatar.webp");
+
+            MultipartBodyBuilder parts = new MultipartBodyBuilder();
+            parts.part("dto", new RegistrationRequestDto(
+                    email,
+                    DatabaseTestDataFactory.DEFAULT_PASSWORD,
+                    "Avatar Webp User",
+                    CurrencyCode.EUR
+            ), MediaType.APPLICATION_JSON);
+            ByteArrayResource avatar = MultipartTestResourceFactory.webpImage("avatar.webp");
+            parts.part("avatar", avatar, MediaType.parseMediaType("image/webp"));
+
+            restTestClient.post()
+                    .uri("/api/v1/auth/sign-up")
+                    .body(parts.build())
+                    .exchange()
+                    .expectStatus().isCreated()
+                    .expectBody()
+                    .jsonPath("$.avatarUrl").isEqualTo("https://test-bucket.local/avatar.webp");
+
+            verify(s3Service).saveFile(anyString(), any());
+            verify(s3Service).generatePresignedUrl(anyString());
+            verify(authEmailService).sendVerificationEmail(eq(email), anyString());
+        }
+
+        @Test
         void shouldRejectRegistrationWhenFullNameContainsInvalidCharacters() {
             String email = "invalid-fullname@example.com";
             MultipartBodyBuilder parts = new MultipartBodyBuilder();

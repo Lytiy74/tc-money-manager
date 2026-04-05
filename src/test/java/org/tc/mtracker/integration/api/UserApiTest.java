@@ -89,6 +89,28 @@ class UserApiTest extends BaseApiIntegrationTest {
     }
 
     @Test
+    void shouldUploadWebpAvatarWhenUpdatingProfile() {
+        User user = fixtures.createUser("avatar-webp@example.com");
+        when(s3Service.generatePresignedUrl(anyString())).thenReturn("https://test-bucket.local/avatar.webp");
+
+        MultipartBodyBuilder parts = new MultipartBodyBuilder();
+        ByteArrayResource avatar = MultipartTestResourceFactory.webpImage("avatar.webp");
+        parts.part("avatar", avatar, MediaType.parseMediaType("image/webp"));
+
+        restTestClient.put()
+                .uri("/api/v1/users/me")
+                .header("Authorization", authHeader(user))
+                .body(parts.build())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.avatarUrl").isEqualTo("https://test-bucket.local/avatar.webp");
+
+        verify(s3Service).saveFile(anyString(), any());
+        verify(s3Service).generatePresignedUrl(anyString());
+    }
+
+    @Test
     void shouldTriggerAndVerifyEmailUpdateFlow() {
         User user = fixtures.createUser("before-update@example.com");
 

@@ -285,7 +285,7 @@ class TransactionServiceTest {
         transactionService.deleteTransaction(9L, authentication);
 
         assertThat(account.getBalance()).isEqualByComparingTo("0.00");
-        verify(s3Service).deleteFile(receiptId.toString());
+        verify(s3Service).deleteFile("receipts/" + receiptId);
         verify(transactionRepository).delete(transaction);
     }
 }
