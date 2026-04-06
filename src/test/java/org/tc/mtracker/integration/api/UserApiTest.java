@@ -3,6 +3,7 @@ package org.tc.mtracker.integration.api;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
@@ -223,6 +224,7 @@ class UserApiTest extends BaseApiIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"null", "invalidmail.com", "invalid@"})
+    @NullSource
     void shouldRejectWithInvalidEmail(String invalidEmail) {
         String mail = "valid@example.com";
         User user = fixtures.createUser(mail);
