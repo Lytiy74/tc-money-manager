@@ -239,6 +239,31 @@ class UserApiTest extends BaseApiIntegrationTest {
 
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"7symbol", "8symbols", "withoutcapitalletter7!", "WITHOUTLOWERCASE1!",
+            "toLong-Password12!Mb6wECkRmpULBbs5wNcaQGrGXsqKy5PEoPwWM2KjXQy5232y7HTA!!!", "ASDasdaa@@@"})
+    void shouldReturnBadRequestForInvalidPasswords(String invalidPassword) {
+        String email = "invalid-password@example.com";
+        fixtures.createUser(email);
+        UpdatePasswordRequestDto dto = new UpdatePasswordRequestDto(
+                DatabaseTestDataFactory.DEFAULT_PASSWORD,
+                invalidPassword,
+                invalidPassword
+        );
+        restTestClient.put()
+                .uri("/api/v1/users/me/update-password")
+                .header("Authorization", authHeader(email))
+                .body(dto)
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.detail").isEqualTo("Request validation failed.");
+
+        String savedPassword = userRepository.findByEmail(email).orElseThrow().getPassword();
+        assertThat(passwordEncoder.matches(DatabaseTestDataFactory.DEFAULT_PASSWORD, savedPassword)).isTrue();
+        verifyNoInteractions(authEmailService);
+    }
+
     @Test
     void shouldRejectUnauthenticatedProfileAccess() {
         restTestClient.get()

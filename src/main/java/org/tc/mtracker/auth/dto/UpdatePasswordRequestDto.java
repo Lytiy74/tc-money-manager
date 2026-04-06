@@ -25,7 +25,7 @@ public record UpdatePasswordRequestDto(
         @NotBlank(message = "New password is required.")
         @Length(min = 8, max = 72, message = "New password must be between 8 and 72 characters.")
         @Pattern(
-                regexp = "^(?=.*[A-Z])(?=.*[a-z])(?=.*[!@#$%^&*])\\S{8,72}$",
+                regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\\\\|,.<>/?~`]).{8,72}$",
                 message = "New password must contain uppercase, lowercase, and special characters without spaces."
         )
         String newPassword,

@@ -3,6 +3,8 @@ package org.tc.mtracker.integration.api;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
@@ -164,6 +166,30 @@ class AuthApiTest extends BaseApiIntegrationTest {
             verify(s3Service).saveFile(anyString(), any());
             verify(s3Service).generatePresignedUrl(anyString());
             verify(authEmailService).sendVerificationEmail(eq(email), anyString());
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"7symbol", "8symbols", "withoutcapitalletter7!", "WITHOUTLOWERCASE1!",
+                "toLong-Password12!Mb6wECkRmpULBbs5wNcaQGrGXsqKy5PEoPwWM2KjXQy5232y7HTA!!!", "ASDasdaa@@@"})
+        void shouldRejectRegistrationWhenPasswordIsInvalid(String invalidPassword) {
+            String email = "invalid-fullname@example.com";
+            MultipartBodyBuilder parts = new MultipartBodyBuilder();
+            parts.part("dto", new RegistrationRequestDto(
+                            email,
+                            invalidPassword,
+                            "full Name",
+                            CurrencyCode.USD),
+                    MediaType.APPLICATION_JSON);
+            restTestClient.post()
+                    .uri("/api/v1/auth/sign-up")
+                    .body(parts.build())
+                    .exchange()
+                    .expectStatus().isBadRequest()
+                    .expectBody()
+                    .jsonPath("$.detail").isEqualTo("Request validation failed.");
+
+            assertThat(userRepository.findByEmail(email)).isEmpty();
+            verifyNoInteractions(authEmailService, s3Service);
         }
 
         @Test
@@ -379,6 +405,30 @@ class AuthApiTest extends BaseApiIntegrationTest {
             verify(authEmailService).sendVerificationEmail(eq(email), tokenCaptor.capture());
 
             assertThat(tokenCaptor.getValue()).isNotBlank();
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"7symbol", "8symbols", "withoutcapitalletter7!", "WITHOUTLOWERCASE1!",
+                "toLong-Password12!Mb6wECkRmpULBbs5wNcaQGrGXsqKy5PEoPwWM2KjXQy5232y7HTA!!!", "ASDasdaa@@@"})
+        void shouldBadRequestWhenResetPasswordIsInvalid(String invalidPassword) {
+            String email = "reset@example.com";
+            User user = fixtures.createUser(email);
+            String token = jwtFactory.token(user.getEmail(), "password_reset", Duration.ofMinutes(5));
+
+            restTestClient.post()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/api/v1/auth/reset-password/confirm")
+                            .queryParam("token", token)
+                            .build())
+                    .body(new ResetPasswordRequestDto(invalidPassword, invalidPassword))
+                    .exchange()
+                    .expectStatus().isBadRequest()
+                    .expectBody()
+                    .jsonPath("$.detail").isEqualTo("Request validation failed.");
+
+            String savedPassword = userRepository.findByEmail(email).orElseThrow().getPassword();
+            assertThat(passwordEncoder.matches(DatabaseTestDataFactory.DEFAULT_PASSWORD, savedPassword)).isTrue();
+            verifyNoInteractions(authEmailService);
         }
     }
 }
