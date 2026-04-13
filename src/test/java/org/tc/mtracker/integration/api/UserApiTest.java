@@ -243,8 +243,8 @@ class UserApiTest extends BaseApiIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"7symbol", "8symbols", "withoutcapitalletter7!", "WITHOUTLOWERCASE1!",
-            "toLong-Password12!Mb6wECkRmpULBbs5wNcaQGrGXsqKy5PEoPwWM2KjXQy5232y7HTA!!!", "ASDasdaa@@@"})
-    void shouldReturnBadRequestForInvalidPasswords(String invalidPassword) {
+            "toLong-Password12!Mb6wECkRmpULBbs5wNcaQGrGXsqKy5PEoPwWM2KjXQy5232y7HTA!!!", "ASDasdaa@@@", "ASDasd aa@@@12!"})
+    void shouldReturnBadRequestWhenUpdateInvalidPasswords(String invalidPassword) {
         String email = "invalid-password@example.com";
         fixtures.createUser(email);
         UpdatePasswordRequestDto dto = new UpdatePasswordRequestDto(

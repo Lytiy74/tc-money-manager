@@ -14,7 +14,7 @@ public record ResetPasswordRequestDto(
         )
         @NotBlank @Length(min = 8, max = 72)
         @Pattern(
-                regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\\\\|,.<>/?~`]).{8,72}$",
+                regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\\\\|,.<>/?~`])\\S{8,72}$",
                 message = "Password must contain uppercase, lowercase, and special characters without spaces."
         )
         String password,
@@ -26,7 +26,7 @@ public record ResetPasswordRequestDto(
         )
         @NotBlank @Length(min = 8, max = 72)
         @Pattern(
-                regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\\\\|,.<>/?~`]).{8,72}$",
+                regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\\\\|,.<>/?~`])\\S{8,72}$",
                 message = "Password must contain uppercase, lowercase, and special characters without spaces."
         )
         String confirmPassword
