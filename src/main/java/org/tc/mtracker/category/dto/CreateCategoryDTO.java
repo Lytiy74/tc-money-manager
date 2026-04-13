@@ -11,8 +11,8 @@ public record CreateCategoryDTO(
         @NotEmpty(message = "Name should not be empty")
         String name,
 
-        @Schema(description = "Type", example = "Income")
-        @NotNull(message = "Category's type should not be null")
+        @Schema(description = "Type", example = "INCOME")
+        @NotNull(message = "Category's type should not be null, and should be uppercase")
         TransactionType type,
 
         @Schema(description = "Icon", example = "coin")
