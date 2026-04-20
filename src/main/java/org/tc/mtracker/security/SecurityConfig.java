@@ -47,7 +47,7 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOriginPatterns(
                 List.of(
-                        "http://financeapp.local:5173",
+                        "http://localhost:5173",
                         "https://project-finance-sigma.vercel.app",
                         "https://*.vercel.app"
                 ));
