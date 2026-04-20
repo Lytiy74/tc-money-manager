@@ -20,7 +20,7 @@ public record RegistrationRequestDto(
                 format = "password"
         )
         @NotBlank @Length(min = 8, max = 72)
-        @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\\\\|,.<>/?~`]).{8,72}$")
+        @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\\\\|,.<>/?~`])\\S{8,72}$")
         String password,
 
         @Schema(description = "User's full name", example = "Abraham Lincoln")
