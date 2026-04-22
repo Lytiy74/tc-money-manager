@@ -93,10 +93,9 @@ public class CategoryService {
         User currentUser = userService.getCurrentAuthenticatedUser(auth);
         Category category = findOwnedById(categoryId, currentUser);
 
-        validateDuplicateCategory(dto.name(), dto.type(), currentUser, categoryId);
+        validateDuplicateCategory(dto.name(), category.getType(), currentUser, categoryId);
 
         category.setName(dto.name());
-        category.setType(dto.type());
         category.setIcon(dto.icon());
 
         Category savedCategory = categoryRepository.save(category);

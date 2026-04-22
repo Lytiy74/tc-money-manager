@@ -124,8 +124,8 @@ class CategoryServiceTest {
     void shouldUpdateOwnedCategory() {
         User user = EntityTestFactory.user(1L, "user@example.com", true);
         Category category = EntityTestFactory.category(3L, user, "Side Project", TransactionType.INCOME, CategoryStatus.ACTIVE);
-        UpdateCategoryDTO dto = new UpdateCategoryDTO("Freelance", TransactionType.EXPENSE, "briefcase");
-        CategoryResponseDTO response = new CategoryResponseDTO(3L, "Freelance", TransactionType.EXPENSE, CategoryStatus.ACTIVE, "briefcase");
+        UpdateCategoryDTO dto = new UpdateCategoryDTO("Freelance", "briefcase");
+        CategoryResponseDTO response = new CategoryResponseDTO(3L, "Freelance", TransactionType.INCOME, CategoryStatus.ACTIVE, "briefcase");
 
         when(userService.getCurrentAuthenticatedUser(authentication)).thenReturn(user);
         when(categoryRepository.findOwnedById(3L, user)).thenReturn(Optional.of(category));
@@ -137,7 +137,7 @@ class CategoryServiceTest {
 
         assertThat(result).isEqualTo(response);
         assertThat(category.getName()).isEqualTo("Freelance");
-        assertThat(category.getType()).isEqualTo(TransactionType.EXPENSE);
+        assertThat(category.getType()).isEqualTo(TransactionType.INCOME);
         assertThat(category.getStatus()).isEqualTo(CategoryStatus.ACTIVE);
     }
 
