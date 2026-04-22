@@ -2,6 +2,9 @@ package org.tc.mtracker.integration.api;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -67,23 +70,42 @@ class CategoryApiTest extends BaseApiIntegrationTest {
                 .jsonPath("$[0].name").isEqualTo("Archived Food");
     }
 
-    @Test
-    void shouldCreateCategory() {
+    @ParameterizedTest
+    @ValueSource(strings = {"a", "salary", "salary!", "salary", "SALARY", "hafjykoyawewrryqbtuqgvdsg"})
+    void shouldCreateCategory(String categoryName) {
         User user = fixtures.createUser("create-category@example.com");
 
         restTestClient.post()
                 .uri("/api/v1/categories")
                 .header(HttpHeaders.AUTHORIZATION, authHeader(user))
-                .body(new CreateCategoryDTO("Health", TransactionType.EXPENSE, "heart"))
+                .body(new CreateCategoryDTO(categoryName, TransactionType.EXPENSE, "heart"))
                 .exchange()
                 .expectStatus().isCreated()
                 .expectBody()
-                .jsonPath("$.name").isEqualTo("Health")
+                .jsonPath("$.name").isEqualTo(categoryName)
                 .jsonPath("$.type").isEqualTo("EXPENSE");
 
         assertThat(categoryRepository.findAll())
                 .extracting("name")
-                .contains("Health");
+                .contains(categoryName);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "hafjykoyawewrryqbtuqgvdsg5"})
+    @NullSource
+    void shouldRejectCreateCategoryWithInvalidName(String invalidName) {
+        User user = fixtures.createUser("create-category@example.com");
+
+        restTestClient.post()
+                .uri("/api/v1/categories")
+                .header(HttpHeaders.AUTHORIZATION, authHeader(user))
+                .body(new CreateCategoryDTO(invalidName, TransactionType.EXPENSE, "heart"))
+                .exchange()
+                .expectStatus().isBadRequest();
+
+        assertThat(categoryRepository.findAll())
+                .extracting("name")
+                .doesNotContain(invalidName);
     }
 
     @Test
@@ -99,21 +121,22 @@ class CategoryApiTest extends BaseApiIntegrationTest {
                 .expectStatus().isEqualTo(HttpStatus.CONFLICT);
     }
 
-    @Test
-    void shouldUpdateOwnedCategory() {
+    @ParameterizedTest
+    @ValueSource(strings = {"a", "salary", "salary!", "salary", "SALARY", "hafjykoyawewrryqbtuqgvdsg"})
+    void shouldUpdateOwnedCategory(String categoryName) {
         User user = fixtures.createUser("update-category@example.com");
         var category = fixtures.createUserCategory(user, "Freelance", TransactionType.INCOME);
 
         restTestClient.put()
                 .uri("/api/v1/categories/{id}", category.getId())
                 .header(HttpHeaders.AUTHORIZATION, authHeader(user))
-                .body(new UpdateCategoryDTO("Consulting", TransactionType.INCOME, "briefcase"))
+                .body(new UpdateCategoryDTO(categoryName, TransactionType.INCOME, "briefcase"))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.name").isEqualTo("Consulting");
+                .jsonPath("$.name").isEqualTo(categoryName);
 
-        assertThat(categoryRepository.findById(category.getId()).orElseThrow().getName()).isEqualTo("Consulting");
+        assertThat(categoryRepository.findById(category.getId()).orElseThrow().getName()).isEqualTo(categoryName);
     }
 
     @Test

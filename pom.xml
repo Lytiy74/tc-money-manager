@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>org.tc</groupId>
 	<artifactId>mtracker</artifactId>
-	<version>1.0.0</version>
+	<version>1.0.1</version>
 	<name>mtracker</name>
 	<description>MTracker Project</description>
 	<url/>
