@@ -13,7 +13,7 @@ import java.time.LocalDate;
 public record TransactionCreateRequestDTO(
 
         @NotNull
-        @DecimalMin(value = "0.00")
+        @DecimalMin(value = "0.01")
         @Schema(description = "Transaction amount", example = "125.50")
         BigDecimal amount,
 

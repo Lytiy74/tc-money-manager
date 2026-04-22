@@ -243,6 +243,27 @@ class TransactionApiTest extends BaseApiIntegrationTest {
     }
 
     @Test
+    void shouldRejectTransactionCreationWithInvalidAmount() {
+        User user = fixtures.createUser("user@example.com");
+        var category = fixtures.createGlobalCategory("Salary", TransactionType.INCOME);
+        MultipartBodyBuilder parts = createMultipartRequest(createRequest(
+                new BigDecimal("0.00"),
+                TransactionType.INCOME,
+                category.getId(),
+                LocalDate.of(2026, 4, 1),
+                "Salary",
+                null
+        ));
+
+        restTestClient.post()
+                .uri("/api/v1/transactions")
+                .header(HttpHeaders.AUTHORIZATION, authHeader(user))
+                .body(parts.build())
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
     void shouldRejectFutureOneTimeTransactionCreate() {
         User user = fixtures.createUser("recurring@example.com");
         var category = fixtures.createGlobalCategory("Salary", TransactionType.INCOME);

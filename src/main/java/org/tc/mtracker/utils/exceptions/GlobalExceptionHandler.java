@@ -4,7 +4,9 @@ import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Path;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.MessageSourceResolvable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -13,9 +15,13 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
+import org.springframework.validation.ObjectError;
+import org.springframework.validation.method.ParameterErrors;
+import org.springframework.validation.method.ParameterValidationResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
@@ -48,36 +54,48 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ProblemDetail handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
-        ProblemDetail problemDetail = buildProblem(
-                HttpStatus.BAD_REQUEST,
-                "Request validation failed.",
-                "validation_failed",
-                request
-        );
-
         Map<String, String> errors = new LinkedHashMap<>();
         for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
             errors.put(fieldError.getField(), fieldError.getDefaultMessage());
         }
-        problemDetail.setProperty("errors", errors);
-        return problemDetail;
+        return buildValidationProblem(request, errors);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ProblemDetail handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest request) {
-        ProblemDetail problemDetail = buildProblem(
-                HttpStatus.BAD_REQUEST,
-                "Request validation failed.",
-                "validation_failed",
-                request
-        );
-
         Map<String, String> errors = new LinkedHashMap<>();
         for (ConstraintViolation<?> violation : ex.getConstraintViolations()) {
-            errors.put(violation.getPropertyPath().toString(), violation.getMessage());
+            errors.put(resolveConstraintViolationPath(violation), violation.getMessage());
         }
-        problemDetail.setProperty("errors", errors);
-        return problemDetail;
+        return buildValidationProblem(request, errors);
+    }
+
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ProblemDetail handleHandlerMethodValidation(HandlerMethodValidationException ex, HttpServletRequest request) {
+        Map<String, String> errors = new LinkedHashMap<>();
+
+        for (ParameterValidationResult validationResult : ex.getParameterValidationResults()) {
+            if (validationResult instanceof ParameterErrors parameterErrors) {
+                for (FieldError fieldError : parameterErrors.getFieldErrors()) {
+                    errors.put(fieldError.getField(), fieldError.getDefaultMessage());
+                }
+                for (ObjectError globalError : parameterErrors.getGlobalErrors()) {
+                    errors.put(resolveParameterPath(validationResult), globalError.getDefaultMessage());
+                }
+                continue;
+            }
+
+            String parameterPath = resolveParameterPath(validationResult);
+            for (MessageSourceResolvable resolvableError : validationResult.getResolvableErrors()) {
+                errors.put(parameterPath, resolvableError.getDefaultMessage());
+            }
+        }
+
+        for (MessageSourceResolvable crossParameterError : ex.getCrossParameterValidationResults()) {
+            errors.put("parameters", crossParameterError.getDefaultMessage());
+        }
+
+        return buildValidationProblem(request, errors);
     }
 
     @ExceptionHandler({
@@ -130,6 +148,76 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UserUpdateProfileException.class)
     public ProblemDetail handleUserUpdateProfileException(UserUpdateProfileException ex, HttpServletRequest request) {
         return buildProblem(HttpStatus.BAD_REQUEST, ex.getMessage(), "user_update_profile_failed", request);
+    }
+
+    private ProblemDetail buildValidationProblem(HttpServletRequest request, Map<String, String> errors) {
+        ProblemDetail problemDetail = buildProblem(
+                HttpStatus.BAD_REQUEST,
+                "Request validation failed.",
+                "validation_failed",
+                request
+        );
+        problemDetail.setProperty("errors", errors);
+        return problemDetail;
+    }
+
+    private String resolveConstraintViolationPath(ConstraintViolation<?> violation) {
+        StringBuilder path = new StringBuilder();
+
+        for (Path.Node node : violation.getPropertyPath()) {
+            if (!isValidationPathNode(node)) {
+                continue;
+            }
+
+            appendPathSegment(path, node.getName());
+            appendContainerReference(path, node);
+        }
+
+        return !path.isEmpty() ? path.toString() : "request";
+    }
+
+    private boolean isValidationPathNode(Path.Node node) {
+        return switch (node.getKind()) {
+            case PARAMETER, PROPERTY, CONTAINER_ELEMENT, CROSS_PARAMETER, RETURN_VALUE -> true;
+            default -> false;
+        };
+    }
+
+    private String resolveParameterPath(ParameterValidationResult validationResult) {
+        String parameterName = validationResult.getMethodParameter().getParameterName();
+        if (parameterName == null || parameterName.isBlank()) {
+            parameterName = "arg" + validationResult.getMethodParameter().getParameterIndex();
+        }
+
+        StringBuilder path = new StringBuilder(parameterName);
+        appendIndexedReference(path, validationResult.getContainerKey(), validationResult.getContainerIndex());
+        return path.toString();
+    }
+
+    private void appendPathSegment(StringBuilder path, String segment) {
+        if (segment == null || segment.isBlank() || segment.startsWith("<")) {
+            return;
+        }
+
+        if (!path.isEmpty()) {
+            path.append('.');
+        }
+        path.append(segment);
+    }
+
+    private void appendContainerReference(StringBuilder path, Path.Node node) {
+        appendIndexedReference(path, node.getKey(), node.getIndex());
+    }
+
+    private void appendIndexedReference(StringBuilder path, Object key, Integer index) {
+        if (index != null) {
+            path.append('[').append(index).append(']');
+            return;
+        }
+
+        if (key != null) {
+            path.append('[').append(key).append(']');
+        }
     }
 
     private ProblemDetail buildProblem(HttpStatus status, String detail, String code, HttpServletRequest request) {
