@@ -130,7 +130,7 @@ class CategoryApiTest extends BaseApiIntegrationTest {
         restTestClient.put()
                 .uri("/api/v1/categories/{id}", category.getId())
                 .header(HttpHeaders.AUTHORIZATION, authHeader(user))
-                .body(new UpdateCategoryDTO(categoryName, TransactionType.INCOME, "briefcase"))
+                .body(new UpdateCategoryDTO(categoryName, "briefcase"))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
