@@ -66,6 +66,11 @@ public class PasswordManagementService {
         String email = jwtService.extractUsername(token);
         User user = findUserByEmail(email);
 
+        if (passwordEncoder.matches(dto.password(), user.getPassword())) {
+            log.warn("Password reset rejected: new password is the same as the current one");
+            throw new UserResetPasswordException("New password cannot be the same as the current one.");
+        }
+
         user.setPassword(passwordEncoder.encode(dto.password()));
         userRepository.save(user);
 
