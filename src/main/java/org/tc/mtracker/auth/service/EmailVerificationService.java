@@ -34,6 +34,11 @@ public class EmailVerificationService {
     private final AuthEmailService authEmailService;
 
     public JwtResponseDTO verifyToken(String token) {
+        if (token == null || token.isBlank()) {
+            log.warn("Email verification rejected: token is missing");
+            throw new JwtException("Token is missing");
+        }
+
         String purpose = jwtService.extractClaim(token, claims -> claims.get(CLAIM_NAME_PURPOSE, String.class));
         if (!EMAIL_VERIFICATION_PURPOSE.equals(purpose)) {
             log.warn("Email verification rejected: invalid token purpose={}", purpose);
