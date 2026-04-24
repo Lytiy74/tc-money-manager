@@ -27,7 +27,11 @@ import java.util.Map;
 @Slf4j
 public class PasswordManagementService {
     private static final String PASSWORD_RESET_PURPOSE = "password_reset";
+    private static final String PURPOSE_CLAIM = "purpose";
     private static final String BAD_CREDENTIALS_MESSAGE = "Invalid email or password.";
+    private static final String PASSWORDS_DO_NOT_MATCH_MESSAGE = "Passwords do not match.";
+    private static final String CURRENT_PASSWORD_INCORRECT_MESSAGE = "Current password is incorrect.";
+    private static final String SAME_PASSWORD_RESET_MESSAGE = "New password cannot be the same as the current one.";
 
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
@@ -44,7 +48,7 @@ public class PasswordManagementService {
         );
 
         CustomUserDetails userDetails = new CustomUserDetails(user);
-        String resetToken = jwtService.generateToken(Map.of("purpose", PASSWORD_RESET_PURPOSE), userDetails);
+        String resetToken = jwtService.generateToken(Map.of(PURPOSE_CLAIM, PASSWORD_RESET_PURPOSE), userDetails);
 
         authEmailService.sendResetPassword(user.getEmail(), resetToken);
         log.info("Reset password token sent to user's email with id: {}", user.getId());
@@ -52,12 +56,9 @@ public class PasswordManagementService {
 
     @Transactional
     public JwtResponseDTO resetPassword(String token, ResetPasswordRequestDto dto) {
-        if (!dto.password().equals(dto.confirmPassword())) {
-            log.warn("Password reset rejected: confirmation mismatch");
-            throw new UserResetPasswordException("Passwords do not match!");
-        }
+        validateResetPasswordConfirmation(dto.password(), dto.confirmPassword());
 
-        String purpose = jwtService.extractClaim(token, claims -> claims.get("purpose", String.class));
+        String purpose = jwtService.extractClaim(token, claims -> claims.get(PURPOSE_CLAIM, String.class));
         if (!PASSWORD_RESET_PURPOSE.equals(purpose)) {
             log.warn("Password reset rejected: invalid token purpose={}", purpose);
             throw new JwtException("Invalid token purpose");
@@ -66,13 +67,7 @@ public class PasswordManagementService {
         String email = jwtService.extractUsername(token);
         User user = findUserByEmail(email);
 
-        if (passwordEncoder.matches(dto.password(), user.getPassword())) {
-            log.warn("Password reset rejected: new password is the same as the current one");
-            throw new UserResetPasswordException("New password cannot be the same as the current one.");
-        }
-
-        user.setPassword(passwordEncoder.encode(dto.password()));
-        userRepository.save(user);
+        updateEncodedPassword(user, dto.password());
 
         CustomUserDetails userDetails = new CustomUserDetails(user);
         String accessToken = jwtService.generateToken(userDetails);
@@ -85,20 +80,50 @@ public class PasswordManagementService {
     public void updatePassword(UpdatePasswordRequestDto dto, String currentUserEmail) {
         User user = findUserByEmail(currentUserEmail);
 
-        if (!passwordEncoder.matches(dto.currentPassword(), user.getPassword())) {
-            log.warn("Password update rejected: current password mismatch for userId={}", user.getId());
-            throw new InvalidPasswordException("Current password is incorrect.");
-        }
+        validateCurrentPassword(user, dto.currentPassword());
+        validateUpdatedPasswordConfirmation(
+                dto.newPassword(),
+                dto.confirmNewPassword(),
+                user.getId()
+        );
+        ensureUpdatedPasswordDiffersFromCurrent(user, dto.newPassword(), user.getId());
 
-        if (!dto.newPassword().equals(dto.confirmNewPassword())) {
-            log.warn("Password update rejected: confirmation mismatch for userId={}", user.getId());
-            throw new InvalidPasswordException("Passwords do not match.");
-        }
-
-        user.setPassword(passwordEncoder.encode(dto.newPassword()));
-        userRepository.save(user);
+        updateEncodedPassword(user, dto.newPassword());
         authEmailService.sendPasswordChangedNotification(user.getEmail());
         log.info("Password for user with id {} is updated successfully!", user.getId());
+    }
+
+    private void validateCurrentPassword(User user, String rawCurrentPassword) {
+        if (!passwordEncoder.matches(rawCurrentPassword, user.getPassword())) {
+            log.warn("Password update rejected: current password mismatch for userId={}", user.getId());
+            throw new InvalidPasswordException(CURRENT_PASSWORD_INCORRECT_MESSAGE);
+        }
+    }
+
+    private void validateResetPasswordConfirmation(String password, String confirmation) {
+        if (!password.equals(confirmation)) {
+            log.warn("Password reset rejected: confirmation mismatch");
+            throw new UserResetPasswordException(PASSWORDS_DO_NOT_MATCH_MESSAGE);
+        }
+    }
+
+    private void validateUpdatedPasswordConfirmation(String password, String confirmation, Long userId) {
+        if (!password.equals(confirmation)) {
+            log.warn("Password update rejected: confirmation mismatch for userId={}", userId);
+            throw new InvalidPasswordException(PASSWORDS_DO_NOT_MATCH_MESSAGE);
+        }
+    }
+
+    private void ensureUpdatedPasswordDiffersFromCurrent(User user, String rawPassword, Long userId) {
+        if (passwordEncoder.matches(rawPassword, user.getPassword())) {
+            log.warn("Password update rejected: new password is the same as the current one for userId={}", userId);
+            throw new InvalidPasswordException(SAME_PASSWORD_RESET_MESSAGE);
+        }
+    }
+
+    private void updateEncodedPassword(User user, String rawPassword) {
+        user.setPassword(passwordEncoder.encode(rawPassword));
+        userRepository.save(user);
     }
 
     private User findUserByEmail(String email) {

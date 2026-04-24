@@ -1,6 +1,7 @@
 package org.tc.mtracker.transaction.recurring.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.validator.constraints.Length;
@@ -14,8 +15,9 @@ import java.time.LocalDate;
 public record RecurringTransactionCreateRequestDTO(
 
         @NotNull
-        @DecimalMin(value = "0.00")
-        @Schema(description = "Transaction amount", example = "2500.00")
+        @DecimalMin(value = "0.01")
+        @DecimalMax(value = "999999999999.99")
+        @Schema(description = "Transaction amount, min 0.01 max 999_999_999_999.99", example = "2500.00")
         BigDecimal amount,
 
         @NotNull
