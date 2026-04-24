@@ -1,5 +1,6 @@
 package org.tc.mtracker.unit.auth;
 
+import io.jsonwebtoken.JwtException;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +35,14 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class PasswordManagementServiceTest {
 
+    private static final String EMAIL = "user@example.com";
+    private static final String RESET_TOKEN = "reset-token";
+    private static final String ACCESS_TOKEN = "access-token";
+    private static final String REFRESH_TOKEN = "refresh-token";
+    private static final String CURRENT_PASSWORD = "OldStrongPass!1";
+    private static final String NEW_PASSWORD = "NewStrongPass!1";
+    private static final String ENCODED_PASSWORD = "encoded-password";
+
     @Mock
     private PasswordEncoder passwordEncoder;
 
@@ -54,91 +63,131 @@ class PasswordManagementServiceTest {
 
     @Test
     void shouldResetPasswordAndReturnTokensWhenTokenPurposeIsValid() {
-        User user = EntityTestFactory.user(1L, "user@example.com", true);
-        ResetPasswordRequestDto dto = new ResetPasswordRequestDto("NewStrongPass!1", "NewStrongPass!1");
-        RefreshToken refreshToken = EntityTestFactory.refreshToken("refresh-token", user, LocalDateTime.now().plusDays(1));
+        User user = user();
+        ResetPasswordRequestDto dto = new ResetPasswordRequestDto(NEW_PASSWORD, NEW_PASSWORD);
+        RefreshToken refreshToken = refreshToken(user);
 
-        when(jwtService.extractClaim(eq("reset-token"), any())).thenReturn("password_reset");
-        when(jwtService.extractUsername("reset-token")).thenReturn(user.getEmail());
-        when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
-        when(passwordEncoder.encode(dto.password())).thenReturn("encoded-password");
-        when(jwtService.generateToken(any())).thenReturn("access-token");
+        mockResetToken(RESET_TOKEN, user);
+        when(passwordEncoder.encode(dto.password())).thenReturn(ENCODED_PASSWORD);
+        when(jwtService.generateToken(any())).thenReturn(ACCESS_TOKEN);
         when(refreshTokenService.createRefreshToken(user)).thenReturn(refreshToken);
 
-        JwtResponseDTO result = passwordManagementService.resetPassword("reset-token", dto);
+        JwtResponseDTO result = passwordManagementService.resetPassword(RESET_TOKEN, dto);
 
-        assertThat(result.accessToken()).isEqualTo("access-token");
-        assertThat(result.refreshToken()).isEqualTo("refresh-token");
-        assertThat(user.getPassword()).isEqualTo("encoded-password");
+        assertThat(result.accessToken()).isEqualTo(ACCESS_TOKEN);
+        assertThat(result.refreshToken()).isEqualTo(REFRESH_TOKEN);
+        assertThat(user.getPassword()).isEqualTo(ENCODED_PASSWORD);
         verify(userRepository).save(user);
     }
 
     @Test
     void shouldRejectResetPasswordWhenConfirmationDoesNotMatch() {
-        ResetPasswordRequestDto dto = new ResetPasswordRequestDto("NewStrongPass!1", "Mismatch!1");
+        ResetPasswordRequestDto dto = new ResetPasswordRequestDto(NEW_PASSWORD, "Mismatch!1");
 
-        assertThatThrownBy(() -> passwordManagementService.resetPassword("token", dto))
-                .isInstanceOf(UserResetPasswordException.class);
+        assertThatThrownBy(() -> passwordManagementService.resetPassword(RESET_TOKEN, dto))
+                .isInstanceOf(UserResetPasswordException.class)
+                .hasMessage("Passwords do not match.");
 
         verifyNoInteractions(jwtService, userRepository, passwordEncoder, refreshTokenService);
     }
 
     @Test
-    void shouldRejectResetPasswordWhenNewPasswordIsSameAsCurrentPassword() {
-        User user = EntityTestFactory.user(1L, "user@example.com", true);
-        ResetPasswordRequestDto dto = new ResetPasswordRequestDto("OldPassword!1", "OldPassword!1");
-        when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches(dto.password(), user.getPassword())).thenReturn(true);
-        when(jwtService.extractClaim(eq("reset-token"), any())).thenReturn("password_reset");
-        when(jwtService.extractUsername("reset-token")).thenReturn(user.getEmail());
+    void shouldRejectResetPasswordWhenTokenPurposeIsInvalid() {
+        ResetPasswordRequestDto dto = new ResetPasswordRequestDto(NEW_PASSWORD, NEW_PASSWORD);
+        when(jwtService.extractClaim(eq(RESET_TOKEN), any())).thenReturn("email_verification");
 
+        assertThatThrownBy(() -> passwordManagementService.resetPassword(RESET_TOKEN, dto))
+                .isInstanceOf(JwtException.class)
+                .hasMessage("Invalid token purpose");
 
-        assertThatThrownBy(() -> passwordManagementService.resetPassword("reset-token", dto))
-                .isInstanceOf(UserResetPasswordException.class);
-
-        verify(userRepository, never()).save(user);
-        verify(refreshTokenService, never()).createRefreshToken(user);
-        verify(jwtService, never()).generateToken(any());
-        verify(authEmailService, never()).sendPasswordChangedNotification(user.getEmail());
+        verify(userRepository, never()).findByEmail(any());
+        verifyNoInteractions(passwordEncoder, refreshTokenService, authEmailService);
     }
 
     @Test
     void shouldUpdatePasswordAndSendNotification() {
-        User user = EntityTestFactory.user(1L, "user@example.com", true);
-        UpdatePasswordRequestDto dto = new UpdatePasswordRequestDto("OldStrongPass!1", "NewStrongPass!1", "NewStrongPass!1");
+        User user = user();
+        UpdatePasswordRequestDto dto = new UpdatePasswordRequestDto(CURRENT_PASSWORD, NEW_PASSWORD, NEW_PASSWORD);
 
-        when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches(dto.currentPassword(), user.getPassword())).thenReturn(true);
-        when(passwordEncoder.encode(dto.newPassword())).thenReturn("encoded-password");
+        mockExistingUser(user);
+        mockCurrentAndNewPasswordValidation(user, dto, false);
+        when(passwordEncoder.encode(dto.newPassword())).thenReturn(ENCODED_PASSWORD);
 
         passwordManagementService.updatePassword(dto, user.getEmail());
 
-        assertThat(user.getPassword()).isEqualTo("encoded-password");
+        assertThat(user.getPassword()).isEqualTo(ENCODED_PASSWORD);
         verify(userRepository).save(user);
         verify(authEmailService).sendPasswordChangedNotification(user.getEmail());
     }
 
     @Test
     void shouldRejectUpdatePasswordWhenCurrentPasswordIsInvalid() {
-        User user = EntityTestFactory.user(1L, "user@example.com", true);
-        UpdatePasswordRequestDto dto = new UpdatePasswordRequestDto("wrong", "NewStrongPass!1", "NewStrongPass!1");
+        User user = user();
+        UpdatePasswordRequestDto dto = new UpdatePasswordRequestDto("wrong", NEW_PASSWORD, NEW_PASSWORD);
 
-        when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+        mockExistingUser(user);
         when(passwordEncoder.matches(dto.currentPassword(), user.getPassword())).thenReturn(false);
 
         assertThatThrownBy(() -> passwordManagementService.updatePassword(dto, user.getEmail()))
-                .isInstanceOf(InvalidPasswordException.class);
+                .isInstanceOf(InvalidPasswordException.class)
+                .hasMessage("Current password is incorrect.");
+
+        verify(userRepository, never()).save(any());
+        verify(authEmailService, never()).sendPasswordChangedNotification(any());
     }
 
     @Test
     void shouldRejectUpdatePasswordWhenConfirmationDoesNotMatch() {
-        User user = EntityTestFactory.user(1L, "user@example.com", true);
-        UpdatePasswordRequestDto dto = new UpdatePasswordRequestDto("OldStrongPass!1", "NewStrongPass!1", "OtherStrongPass!1");
+        User user = user();
+        UpdatePasswordRequestDto dto = new UpdatePasswordRequestDto(CURRENT_PASSWORD, NEW_PASSWORD, "OtherStrongPass!1");
 
-        when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+        mockExistingUser(user);
         when(passwordEncoder.matches(dto.currentPassword(), user.getPassword())).thenReturn(true);
 
         assertThatThrownBy(() -> passwordManagementService.updatePassword(dto, user.getEmail()))
-                .isInstanceOf(InvalidPasswordException.class);
+                .isInstanceOf(InvalidPasswordException.class)
+                .hasMessage("Passwords do not match.");
+
+        verify(userRepository, never()).save(any());
+        verify(authEmailService, never()).sendPasswordChangedNotification(any());
+    }
+
+    @Test
+    void shouldRejectUpdatePasswordWhenNewPasswordMatchesCurrentPassword() {
+        User user = user();
+        UpdatePasswordRequestDto dto = new UpdatePasswordRequestDto(CURRENT_PASSWORD, CURRENT_PASSWORD, CURRENT_PASSWORD);
+
+        mockExistingUser(user);
+        mockCurrentAndNewPasswordValidation(user, dto, true);
+
+        assertThatThrownBy(() -> passwordManagementService.updatePassword(dto, user.getEmail()))
+                .isInstanceOf(InvalidPasswordException.class)
+                .hasMessage("New password cannot be the same as the current one.");
+
+        verify(userRepository, never()).save(any());
+        verify(authEmailService, never()).sendPasswordChangedNotification(any());
+    }
+
+    private void mockResetToken(String token, User user) {
+        when(jwtService.extractClaim(eq(token), any())).thenReturn("password_reset");
+        when(jwtService.extractUsername(token)).thenReturn(user.getEmail());
+        mockExistingUser(user);
+    }
+
+    private void mockExistingUser(User user) {
+        when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+    }
+
+    private void mockCurrentAndNewPasswordValidation(User user, UpdatePasswordRequestDto dto, boolean sameAsCurrent) {
+        when(passwordEncoder.matches(dto.currentPassword(), user.getPassword())).thenReturn(true);
+        when(passwordEncoder.matches(dto.newPassword(), user.getPassword())).thenReturn(sameAsCurrent);
+    }
+
+    private User user() {
+        return EntityTestFactory.user(1L, EMAIL, true);
+    }
+
+    private RefreshToken refreshToken(User user) {
+        return EntityTestFactory.refreshToken(REFRESH_TOKEN, user, LocalDateTime.now().plusDays(1));
     }
 }

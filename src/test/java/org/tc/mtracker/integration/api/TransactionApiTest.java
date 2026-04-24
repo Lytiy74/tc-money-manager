@@ -2,6 +2,8 @@ package org.tc.mtracker.integration.api;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
@@ -69,12 +71,13 @@ class TransactionApiTest extends BaseApiIntegrationTest {
         return parts;
     }
 
-    @Test
-    void shouldCreateTransactionWithoutReceiptsAndUpdateBalance() {
+    @ParameterizedTest
+    @CsvSource({"0.01", "999999999999.99"})
+    void shouldCreateTransactionWithoutReceiptsAndUpdateBalance(BigDecimal amount) {
         User user = fixtures.createUser("transactions@example.com");
         var category = fixtures.createGlobalCategory("Salary", TransactionType.INCOME);
         MultipartBodyBuilder parts = createMultipartRequest(createRequest(
-                new BigDecimal("15.00"),
+                amount,
                 TransactionType.INCOME,
                 category.getId(),
                 LocalDate.of(2026, 4, 1),
@@ -93,7 +96,32 @@ class TransactionApiTest extends BaseApiIntegrationTest {
                 .jsonPath("$.receiptsUrls.length()").isEqualTo(0);
 
         assertThat(accountRepository.findById(user.getDefaultAccount().getId()).orElseThrow().getBalance())
-                .isEqualByComparingTo("15.00");
+                .isEqualByComparingTo(amount.toString());
+        verifyNoInteractions(s3Service);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0.00", "-100.00", "9999999999999.99"})
+    void shouldRejectTransactionCreateWhenAmountInvalid(BigDecimal amount) {
+        User user = fixtures.createUser("transactions@example.com");
+        var category = fixtures.createGlobalCategory("Salary", TransactionType.INCOME);
+        MultipartBodyBuilder parts = createMultipartRequest(createRequest(
+                amount,
+                TransactionType.INCOME,
+                category.getId(),
+                LocalDate.of(2026, 4, 1),
+                "Salary",
+                null
+        ));
+
+        restTestClient.post()
+                .uri("/api/v1/transactions")
+                .header(HttpHeaders.AUTHORIZATION, authHeader(user))
+                .body(parts.build())
+                .exchange()
+                .expectStatus().isBadRequest();
+
+        assertThat(transactionRepository.findAll()).isEmpty();
         verifyNoInteractions(s3Service);
     }
 

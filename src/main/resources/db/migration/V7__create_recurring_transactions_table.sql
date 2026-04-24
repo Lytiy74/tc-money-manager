@@ -4,7 +4,7 @@ CREATE TABLE recurring_transactions
     user_id             BIGINT         NOT NULL,
     account_id          BIGINT         NOT NULL,
     category_id         BIGINT         NOT NULL,
-    amount              DECIMAL(19, 2) NOT NULL,
+    amount DECIMAL(14, 2) NOT NULL,
     type                VARCHAR(16)    NOT NULL,
     start_date          DATE           NOT NULL,
     description         VARCHAR(255),
